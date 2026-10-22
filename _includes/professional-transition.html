@@ -7,17 +7,24 @@
   <meta name="description" content="{{ p.seo.description | escape }}">
   {% if p.seo.draft %}<meta name="robots" content="noindex,nofollow">{% endif %}
   <meta name="theme-color" content="#17372d">
-  <link rel="stylesheet" href="{{ '/assets/mindset-lab.css' | relative_url }}">
+  <link rel="stylesheet" href="{{ '/assets/mindset-lab.css' | relative_url }}?v=menu-20261022">
 </head>
 <body>
   <a class="skip-link" href="#main">Перейти к тексту</a>
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="{{ '/programs/' | relative_url }}">{{ site.data.programs.brand | escape }}</a>
-      <nav aria-label="Навигация по странице">
-        <a href="#program">Программа</a><a href="#format">Формат</a><a href="#conditions">Условия</a>
+      <nav class="desktop-nav" aria-label="Навигация по странице">
+        <a href="#program">Программа</a><a href="#format">Формат</a><a href="#conditions">Условия</a><a href="#about">Обо мне</a>
         <a class="nav-cta" href="#join">{{ p.hero.primary_label | escape }}</a>
       </nav>
+      <details class="page-menu">
+        <summary>Меню <span class="menu-icon" aria-hidden="true"></span></summary>
+        <nav aria-label="Навигация по странице на телефоне">
+          <a href="#program">Программа</a><a href="#format">Формат</a><a href="#conditions">Условия</a><a href="#about">Обо мне</a>
+          <a class="nav-cta" href="#join">{{ p.hero.primary_label | escape }}</a>
+        </nav>
+      </details>
     </div>
   </header>
   <main id="main">

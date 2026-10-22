@@ -44,7 +44,7 @@ assert '{{' not in rendered and '{%' not in rendered
 changed['professional_transition']['seo']['draft']=False
 public=render((ROOT/'programs/professional-transition/index.html').read_text(),{'site':{'data':changed,'baseurl':'/test'}})
 assert 'noindex,nofollow' not in public
-assert 'href="/test/assets/mindset-lab.css"' in public
+assert 'href="/test/assets/mindset-lab.css?v=menu-20261022"' in public
 
 class Page(HTMLParser):
     def __init__(self): super().__init__();self.ids=[];self.links=[]
