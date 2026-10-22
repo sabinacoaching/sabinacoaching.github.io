@@ -1,0 +1,14 @@
+---
+layout: null
+---
+{% assign c = site.data.programs %}
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ c.title | escape }} | {{ c.brand | escape }}</title><meta name="robots" content="noindex,nofollow"><link rel="stylesheet" href="{{ '/assets/mindset-lab.css' | relative_url }}"></head>
+<body class="catalog-page">
+<header class="site-header"><div class="container header-inner"><a class="brand" href="{{ '/programs/' | relative_url }}">{{ c.brand | escape }}</a><nav aria-label="Главная навигация"><a href="{{ '/programs/' | relative_url }}" aria-current="page">Программы</a></nav></div></header>
+<main id="main" class="container catalog-main"><p class="eyebrow">{{ c.brand | escape }}</p><h1>{{ c.title | escape }}</h1><p class="catalog-intro">{{ c.intro | escape }}</p><div class="program-cards">
+{% for program in c.programs %}<article class="program-card"><p class="eyebrow">{{ program.meta | escape }}</p><h2>{{ program.title | escape }}</h2><p>{{ program.description | escape }}</p><a class="button" href="{{ program.url | relative_url }}">{{ program.button | escape }} <span aria-hidden="true">↗</span></a></article>{% endfor %}
+</div></main>
+<footer class="footer"><div class="container footer-inner"><span class="brand">{{ c.brand | escape }}</span><a href="{{ '/editor/' | relative_url }}">Редактировать страницы</a></div></footer>
+</body></html>
+

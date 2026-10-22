@@ -1,0 +1,10 @@
+title: Mindset Lab
+url: https://sabinacoaching.github.io
+baseurl: ""
+exclude:
+  - README.md
+  - scripts
+  - .preview
+  - .openai
+  - .gitignore
+

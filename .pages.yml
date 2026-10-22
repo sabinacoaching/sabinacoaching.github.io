@@ -1,0 +1,117 @@
+content:
+  - name: professional_transition
+    label: Профессиональный переход
+    type: file
+    path: _data/professional_transition.json
+    format: json
+    fields:
+      - name: hero
+        label: Первый экран
+        type: object
+        fields:
+          - { name: title, label: Название программы, type: string, required: true }
+          - name: description
+            label: Краткое описание
+            type: rich-text
+            options: { format: html, media: false, switcher: false }
+          - { name: eyebrow, label: Подпись над названием, type: string }
+          - { name: duration, label: Продолжительность, type: string }
+          - { name: meetings, label: Количество встреч, type: string }
+          - { name: group, label: Размер группы, type: string }
+          - { name: primary_label, label: Главная кнопка, type: string }
+          - { name: secondary_label, label: Ссылка на программу, type: string }
+      - name: sections
+        label: Разделы лендинга
+        type: object
+        list:
+          collapsible:
+            collapsed: true
+            summary: "{title}"
+        fields:
+          - { name: id, type: string, hidden: true }
+          - { name: kind, type: string, hidden: true }
+          - { name: tone, type: string, hidden: true }
+          - { name: title, label: Заголовок раздела, type: string }
+          - name: body
+            label: Текст раздела
+            type: rich-text
+            options: { format: html, media: false, switcher: false }
+      - name: conditions
+        label: Условия и стоимость
+        type: object
+        fields:
+          - { name: title, label: Заголовок, type: string }
+          - { name: duration_label, label: Подпись продолжительности, type: string }
+          - { name: duration, label: Продолжительность, type: string }
+          - { name: group_label, label: Подпись размера группы, type: string }
+          - { name: group, label: Размер группы, type: string }
+          - { name: start_label, label: Подпись начала, type: string }
+          - { name: start, label: Начало программы, type: string }
+          - { name: schedule_label, label: Подпись расписания, type: string }
+          - { name: schedule, label: День и время с часовым поясом, type: string }
+          - { name: meeting_label, label: Подпись длительности встречи, type: string }
+          - { name: meeting, label: Продолжительность встречи, type: string }
+          - { name: base_label, label: Название основного тарифа, type: string }
+          - { name: base_price, label: Стоимость основного тарифа, type: string }
+          - { name: personal_label, label: Название тарифа с личными сессиями, type: string }
+          - { name: personal_price, label: Стоимость тарифа с личными сессиями, type: string }
+          - { name: payment_label, label: Подпись оплаты, type: string }
+          - { name: payment, label: Порядок оплаты, type: text }
+      - { name: faq_title, label: Заголовок вопросов, type: string }
+      - name: faq
+        label: Вопросы и ответы
+        type: object
+        list:
+          collapsible:
+            collapsed: true
+            summary: "{question}"
+        fields:
+          - { name: question, label: Вопрос, type: string }
+          - name: answer
+            label: Ответ
+            type: rich-text
+            options: { format: html, media: false, switcher: false }
+      - name: contact
+        label: Приглашение к участию
+        type: object
+        fields:
+          - { name: title, label: Заголовок, type: string }
+          - name: body
+            label: Текст приглашения
+            type: rich-text
+            options: { format: html, media: false, switcher: false }
+          - { name: button, label: Текст кнопки, type: string }
+          - { name: url, label: Ссылка на Telegram, type: string }
+      - name: seo
+        label: Настройки страницы
+        type: object
+        fields:
+          - { name: title, label: Название вкладки, type: string }
+          - { name: description, label: Описание страницы, type: text }
+          - { name: draft, label: "Черновик: скрыть от поисковиков", type: boolean }
+  - name: programs
+    label: Каталог программ
+    type: file
+    path: _data/programs.json
+    format: json
+    fields:
+      - { name: brand, label: Название сайта, type: string }
+      - { name: title, label: Заголовок, type: string }
+      - { name: intro, label: Вступление, type: text }
+      - name: programs
+        label: Программы
+        type: object
+        list:
+          collapsible:
+            collapsed: true
+            summary: "{title}"
+        fields:
+          - { name: title, label: Название, type: string }
+          - { name: description, label: Описание, type: text }
+          - { name: meta, label: Кратко о формате, type: string }
+          - { name: url, label: Адрес страницы, type: string }
+          - { name: button, label: Текст кнопки, type: string }
+settings:
+  content:
+    merge: true
+
