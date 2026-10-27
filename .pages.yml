@@ -31,6 +31,12 @@ content:
           - { name: id, type: string, hidden: true }
           - { name: has_situations, type: boolean, hidden: true }
           - { name: has_barriers, type: boolean, hidden: true }
+          - { name: hidden, label: Скрыть раздел на сайте, type: boolean }
+          - { name: has_curriculum, type: boolean, hidden: true }
+          - { name: paired_layout, type: string, hidden: true }
+          - { name: group_id, type: string, hidden: true }
+          - { name: group_member, type: boolean, hidden: true }
+          - { name: show_question, type: boolean, hidden: true }
           - { name: kind, type: string, hidden: true }
           - { name: tone, type: string, hidden: true }
           - { name: title, label: Заголовок раздела, type: string }
@@ -82,6 +88,30 @@ content:
             label: Текст после карточек
             type: rich-text
             options: { format: html, media: false, switcher: false }
+      - name: curriculum
+        label: "Логика и содержание: пять этапов"
+        type: object
+        fields:
+          - { name: open_label, label: Кнопка открытия всех этапов, type: string }
+          - { name: close_label, label: Кнопка закрытия всех этапов, type: string }
+          - name: stages
+            label: Этапы
+            type: object
+            list:
+              collapsible:
+                collapsed: true
+                summary: "{title}"
+            fields:
+              - { name: title, label: Название этапа, type: string }
+              - { name: short, label: Видимая часть текста, type: text }
+              - name: body
+                label: Текст после раскрытия
+                type: rich-text
+                options: { format: html, media: false, switcher: false }
+          - name: note
+            label: Важно
+            type: rich-text
+            options: { format: html, media: false, switcher: false }
       - name: conditions
         label: Условия и стоимость
         type: object
@@ -113,6 +143,7 @@ content:
             summary: "{question}"
         fields:
           - { name: question, label: Вопрос, type: string }
+          - { name: hidden, label: Скрыть вопрос на сайте, type: boolean }
           - name: answer
             label: Ответ
             type: rich-text

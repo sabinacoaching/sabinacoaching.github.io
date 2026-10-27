@@ -34,6 +34,7 @@ changed=copy.deepcopy(data)
 changed['professional_transition']['hero']['title']='Проверка самостоятельной правки'
 changed['professional_transition']['sections'][0]['body']='<p><strong>Новый абзац автора</strong></p>'
 changed['professional_transition']['conditions']['base_price']='81 000 руб.'
+changed['professional_transition']['faq'][0]['hidden']=False
 changed['professional_transition']['faq'][0]['answer']='<p>Новый ответ автора</p>'
 changed['professional_transition']['situations']['cards'][0].update({'title':'Изменённый заголовок ситуации','short':'Изменённая короткая фраза','body':'<p>Изменённый раскрывающийся текст</p>'})
 changed['professional_transition']['sections'].append({'title':'Новый раздел','body':'<p>Дополнение</p>'})
@@ -45,7 +46,7 @@ assert '{{' not in rendered and '{%' not in rendered
 changed['professional_transition']['seo']['draft']=False
 public=render((ROOT/'programs/professional-transition/index.html').read_text(),{'site':{'data':changed,'baseurl':'/test'}})
 assert 'noindex,nofollow' not in public
-assert 'href="/test/assets/mindset-lab.css?v=barriers-20261027"' in public
+assert 'href="/test/assets/mindset-lab.css?v=layout-20261027"' in public
 
 class Page(HTMLParser):
     def __init__(self): super().__init__();self.ids=[];self.links=[]
@@ -69,6 +70,18 @@ for file in OUT.rglob('*.html'):
             linked=Page();linked.feed(target.read_text());assert u.fragment in linked.ids,href
 
 new=(OUT/'programs/professional-transition/index.html').read_text()
+assert 'id="approach"' not in new
+assert 'class="section-number"' not in new
+for anchor in ['trajectory','values','format','audience']:
+    assert new.count('id="'+anchor+'"')==1,anchor
+assert new.count('class="situation-card curriculum-step"')==5
+positions=[new.index('id="'+anchor+'"') for anchor in ['outcomes','format','audience','program','conditions','about','faq','join']]
+assert positions==sorted(positions),'Unexpected section order'
+restored=copy.deepcopy(data)
+next(s for s in restored['professional_transition']['sections'] if s['id']=='approach')['hidden']=False
+assert 'id="approach"' in render((ROOT/'programs/professional-transition/index.html').read_text(),{'site':{'data':restored,'baseurl':''}})
+for card in data['professional_transition']['situations']['cards']:
+    assert not card['title'][0].isdigit(),card['title']
 for invalid in ['жизнеобращующими','надо перечислить','этот пункт был решением','[STORY_SPACE]','Здесь дальше будет история','—']:
     assert invalid not in new,invalid
 print('Passed: CMS coverage, edit-to-page rendering, new sections, draft toggle, base URL, links, anchors and content checks.')

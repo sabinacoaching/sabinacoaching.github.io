@@ -7,7 +7,7 @@
   <meta name="description" content="{{ p.seo.description | escape }}">
   {% if p.seo.draft %}<meta name="robots" content="noindex,nofollow">{% endif %}
   <meta name="theme-color" content="#17372d">
-  <link rel="stylesheet" href="{{ '/assets/mindset-lab.css' | relative_url }}?v=barriers-20261027">
+  <link rel="stylesheet" href="{{ '/assets/mindset-lab.css' | relative_url }}?v=layout-20261027">
 </head>
 <body>
   <a class="skip-link" href="#main">Перейти к тексту</a>
@@ -43,40 +43,33 @@
       </div>
     </section>
     {% for section in p.sections %}
+    {% if section.id == 'about' %}{% include conditions.html %}{% endif %}
+    {% unless section.hidden %}
+    {% unless section.group_member %}
     {% assign section_id = section.id | default: forloop.index %}
     <section class="section section--{{ section.kind | default: 'text' | escape }} tone-{{ section.tone | default: 'light' | escape }}" id="{{ section_id | escape }}" aria-labelledby="title-{{ section_id | escape }}">
       <div class="container section-inner">
-        <div class="section-heading"><p class="section-number" aria-hidden="true">{{ forloop.index }}</p><h2 id="title-{{ section_id | escape }}">{{ section.title | escape }}</h2></div>
+        {% if section.paired_layout %}{% include paired-panels.html %}{% endif %}
+        {% unless section.paired_layout %}
+        <div class="section-heading"><h2 id="title-{{ section_id | escape }}">{{ section.title | escape }}</h2></div>
         <div class="prose section-body">{{ section.body }}</div>
         {% if section.has_situations %}{% include situations.html %}{% endif %}
         {% if section.has_barriers %}{% include barriers.html %}{% endif %}
+        {% if section.has_curriculum %}{% include curriculum.html %}{% endif %}
+        {% endunless %}
       </div>
     </section>
+    {% endunless %}
+    {% endunless %}
     {% endfor %}
-    <section class="section conditions tone-paper" id="conditions" aria-labelledby="conditions-title">
-      <div class="container">
-        <h2 id="conditions-title">{{ p.conditions.title | escape }}</h2>
-        <dl class="condition-grid">
-          <div><dt>{{ p.conditions.duration_label | escape }}</dt><dd>{{ p.conditions.duration | escape }}</dd></div>
-          <div><dt>{{ p.conditions.group_label | escape }}</dt><dd>{{ p.conditions.group | escape }}</dd></div>
-          <div><dt>{{ p.conditions.start_label | escape }}</dt><dd>{{ p.conditions.start | escape }}</dd></div>
-          <div><dt>{{ p.conditions.schedule_label | escape }}</dt><dd>{{ p.conditions.schedule | escape }}</dd></div>
-          <div><dt>{{ p.conditions.meeting_label | escape }}</dt><dd>{{ p.conditions.meeting | escape }}</dd></div>
-        </dl>
-        <div class="prices">
-          <div class="price"><h3>{{ p.conditions.base_label | escape }}</h3><p>{{ p.conditions.base_price | escape }}</p></div>
-          <div class="price"><h3>{{ p.conditions.personal_label | escape }}</h3><p>{{ p.conditions.personal_price | escape }}</p></div>
-        </div>
-        <p class="payment"><strong>{{ p.conditions.payment_label | escape }}:</strong> {{ p.conditions.payment | escape }}</p>
-        <a class="button" href="#join">{{ p.hero.primary_label | escape }}</a>
-      </div>
-    </section>
     <section class="section faq" id="faq" aria-labelledby="faq-title">
       <div class="container section-inner">
         <h2 id="faq-title">{{ p.faq_title | escape }}</h2>
         <div class="faq-list">
         {% for item in p.faq %}
+        {% unless item.hidden %}
           <details><summary>{{ item.question | escape }}<span aria-hidden="true">+</span></summary><div class="prose faq-answer">{{ item.answer }}</div></details>
+        {% endunless %}
         {% endfor %}
         </div>
       </div>
@@ -86,7 +79,7 @@
     </section>
   </main>
   <footer class="footer"><div class="container footer-inner"><a class="brand" href="{{ '/programs/' | relative_url }}">{{ site.data.programs.brand | escape }}</a><div><a href="{{ '/programs/' | relative_url }}">Программы</a><a href="{{ '/editor/' | relative_url }}">Редактировать страницу</a><a href="#top">Наверх ↑</a></div></div></footer>
-  <script src="{{ '/assets/situations.js' | relative_url }}?v=20261027" defer></script>
+  <script src="{{ '/assets/situations.js' | relative_url }}?v=layout-20261027" defer></script>
 </body>
 </html>
 

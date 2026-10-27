@@ -9,6 +9,11 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / '.preview'
 
 def value(expression, context):
+    comparison=re.fullmatch(r"(.+?)\s+(==|!=)\s+(.+)",expression)
+    if comparison:
+        left,operator,right=comparison.groups()
+        a,b=value(left,context),value(right,context)
+        return a==b if operator=='==' else a!=b
     parts = [x.strip() for x in expression.split('|')]
     def get(raw):
         raw = raw.strip()
@@ -46,6 +51,8 @@ def parse(tokens, index=0, stop=None):
             inner,index=parse(tokens,index,'endfor'); nodes.append(('for',variable.strip(),expr.strip(),inner))
         elif tag.startswith('if '):
             inner,index=parse(tokens,index,'endif'); nodes.append(('if',tag[3:].strip(),inner))
+        elif tag.startswith('unless '):
+            inner,index=parse(tokens,index,'endunless'); nodes.append(('unless',tag[7:].strip(),inner))
         elif tag.startswith('assign '):
             key,expr=tag[7:].split('=',1);nodes.append(('assign',key.strip(),expr.strip()))
         elif tag.startswith('include '):nodes.append(('include',tag[8:].strip()))
@@ -63,6 +70,8 @@ def render_nodes(nodes, context):
         elif kind=='include': result.append(render((ROOT/'_includes'/node[1]).read_text(),dict(context)))
         elif kind=='if':
             if value(node[1],context): result.append(render_nodes(node[2],dict(context)))
+        elif kind=='unless':
+            if not value(node[1],context): result.append(render_nodes(node[2],dict(context)))
         elif kind=='for':
             values=value(node[2],context)
             for i,item in enumerate(values):

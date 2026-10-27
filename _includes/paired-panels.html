@@ -1,0 +1,13 @@
+<div class="paired-panels">
+  {% for panel in p.sections %}
+  {% if panel.group_id == section.id %}
+  {% unless panel.hidden %}
+  <article class="paired-panel" {% unless panel.id == section.id %}id="{{ panel.id | escape }}"{% endunless %}>
+    <h2 id="title-{{ panel.id | escape }}">{{ panel.title | escape }}</h2>
+    <div class="prose">{{ panel.body }}</div>
+  </article>
+  {% if section.show_question %}{% if panel.id == section.id %}<span class="comparison-question" aria-hidden="true">?</span>{% endif %}{% endif %}
+  {% endunless %}
+  {% endif %}
+  {% endfor %}
+</div>
