@@ -30,6 +30,7 @@ content:
         fields:
           - { name: id, type: string, hidden: true }
           - { name: has_situations, type: boolean, hidden: true }
+          - { name: has_barriers, type: boolean, hidden: true }
           - { name: kind, type: string, hidden: true }
           - { name: tone, type: string, hidden: true }
           - { name: title, label: Заголовок раздела, type: string }
@@ -58,6 +59,29 @@ content:
                 label: Текст после раскрытия
                 type: rich-text
                 options: { format: html, media: false, switcher: false }
+      - name: barriers
+        label: "Почему сложно решиться: карточки"
+        type: object
+        fields:
+          - { name: open_label, label: Кнопка открытия всех карточек, type: string }
+          - { name: close_label, label: Кнопка закрытия всех карточек, type: string }
+          - name: cards
+            label: Причины
+            type: object
+            list:
+              collapsible:
+                collapsed: true
+                summary: "{title}"
+            fields:
+              - { name: title, label: Название причины, type: string }
+              - name: body
+                label: Текст после раскрытия
+                type: rich-text
+                options: { format: html, media: false, switcher: false }
+          - name: afterword
+            label: Текст после карточек
+            type: rich-text
+            options: { format: html, media: false, switcher: false }
       - name: conditions
         label: Условия и стоимость
         type: object

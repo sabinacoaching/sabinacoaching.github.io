@@ -48,3 +48,11 @@
 @media(max-width:640px){.situations{margin-top:34px}.situations-toolbar{display:block;margin-bottom:22px}.situations-toolbar h3{font-size:28px}.situations-controls{max-width:none;justify-content:flex-start;margin-top:16px;gap:20px}.situations-grid{grid-template-columns:1fr;gap:16px}.situation-card{padding:23px 21px}.situation-title{font-size:25px;margin-bottom:16px}.situation-details>summary{gap:16px;font-size:16px}.situation-body{margin-top:20px;padding-top:18px}}
 
 
+
+/* Four reasons, with the heading itself acting as the disclosure control. */
+.barriers-cards{margin-top:22px}
+.barriers-cards .situations-toolbar{justify-content:flex-end;margin-bottom:20px}
+.barrier-card .situation-title{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;width:100%;margin:0;font-size:27px}
+.barrier-card .barrier-title-text,.barrier-card details[open] summary .barrier-title-text{flex:1;min-width:0;transform:none;color:inherit;font:inherit;transition:none}
+.barriers-afterword{max-width:830px;margin-top:34px}
+@media(max-width:640px){.barriers-cards .situations-toolbar{display:flex}.barriers-cards .situations-controls{justify-content:flex-end;margin-top:0}.barrier-card .situation-title{font-size:25px;gap:16px}.barriers-afterword{margin-top:28px}}

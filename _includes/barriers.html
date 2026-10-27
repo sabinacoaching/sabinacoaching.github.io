@@ -1,0 +1,21 @@
+<div class="situations barriers-cards" id="barriers-cards" data-situations>
+  <div class="situations-toolbar">
+    <div class="situations-controls" role="group" aria-label="Управление раскрытием причин">
+      <button type="button" class="situations-control" data-situations-action="open" aria-controls="barriers-grid" hidden>{{ p.barriers.open_label | escape }}</button>
+      <button type="button" class="situations-control" data-situations-action="close" aria-controls="barriers-grid" hidden>{{ p.barriers.close_label | escape }}</button>
+    </div>
+  </div>
+  <div class="situations-grid" id="barriers-grid">
+    {% for card in p.barriers.cards %}
+    <article class="situation-card barrier-card">
+      <details class="situation-details" aria-labelledby="barrier-title-{{ forloop.index }}">
+        <summary>
+          <h4 class="situation-title" id="barrier-title-{{ forloop.index }}"><span class="barrier-title-text">{{ card.title | escape }}</span><span class="situation-icon" aria-hidden="true"></span></h4>
+        </summary>
+        <div class="prose situation-body">{{ card.body }}</div>
+      </details>
+    </article>
+    {% endfor %}
+  </div>
+</div>
+<div class="prose barriers-afterword">{{ p.barriers.afterword }}</div>

@@ -7,7 +7,7 @@
   <meta name="description" content="{{ p.seo.description | escape }}">
   {% if p.seo.draft %}<meta name="robots" content="noindex,nofollow">{% endif %}
   <meta name="theme-color" content="#17372d">
-  <link rel="stylesheet" href="{{ '/assets/mindset-lab.css' | relative_url }}?v=situations-20261027">
+  <link rel="stylesheet" href="{{ '/assets/mindset-lab.css' | relative_url }}?v=barriers-20261027">
 </head>
 <body>
   <a class="skip-link" href="#main">Перейти к тексту</a>
@@ -49,6 +49,7 @@
         <div class="section-heading"><p class="section-number" aria-hidden="true">{{ forloop.index }}</p><h2 id="title-{{ section_id | escape }}">{{ section.title | escape }}</h2></div>
         <div class="prose section-body">{{ section.body }}</div>
         {% if section.has_situations %}{% include situations.html %}{% endif %}
+        {% if section.has_barriers %}{% include barriers.html %}{% endif %}
       </div>
     </section>
     {% endfor %}
