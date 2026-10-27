@@ -102,7 +102,7 @@ assert "position:static" in (ROOT/'assets/transition-design.css').read_text()
 print('Passed: author design settings, five numbered stages, note after fifth stage.')
 
 assert len(data['professional_transition']['faq'])==6
-assert sum(not x.get('hidden',False) for x in data['professional_transition']['faq'])==4
+assert sum(not x.get('hidden',False) for x in data['professional_transition']['faq'])==6
 assert '--promo: #e4b49d;' in new
 assert data['professional_transition_design']['palette']['accent']=='#b54d35'
-print('Passed: separate peach callouts, original coral buttons, all six FAQ entries preserved.')
+print('Passed: separate peach callouts, original coral buttons, all six FAQ entries displayed.')
