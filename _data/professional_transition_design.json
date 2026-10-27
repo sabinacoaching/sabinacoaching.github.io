@@ -1,0 +1,43 @@
+{
+  "palette": {
+    "green": "#17372d",
+    "deep": "#102920",
+    "ink": "#1b2a23",
+    "light": "#faf8f2",
+    "paper": "#f0ebe1",
+    "card": "#f0ebe1",
+    "white": "#FFFFFF",
+    "accent": "#b54d35",
+    "accent_ink": "#FFFFFF",
+    "muted": "#58645c",
+    "promo": "#e4b49d",
+    "promo_ink": "#1b2a23"
+  },
+  "layout": {
+    "hero_title_size": 58,
+    "hero_text_size": 18,
+    "hero_text_width": 750,
+    "hero_title_width": 760,
+    "hero_padding_top": 56,
+    "hero_padding_bottom": 46,
+    "comparison_gap": 150,
+    "comparison_title_size": 32,
+    "section_spacing": 84,
+    "promo_width": 930,
+    "promo_offset": 46,
+    "note_width": 960,
+    "card_radius": 6
+  },
+  "conditions_tone": "green",
+  "join_tone": "light",
+  "section_tones": {
+    "recognition": "light",
+    "trajectory": "green",
+    "barriers": "light",
+    "outcomes": "paper",
+    "format": "green",
+    "program": "light",
+    "about": "light",
+    "faq": "paper"
+  }
+}

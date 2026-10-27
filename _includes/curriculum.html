@@ -6,7 +6,7 @@
   <div class="curriculum-list" id="curriculum-list">
     {% for stage in p.curriculum.stages %}
     <article class="situation-card curriculum-step">
-      <h3 class="situation-title" id="stage-title-{{ forloop.index }}">{{ stage.title | escape }}</h3>
+      <h3 class="situation-title" id="stage-title-{{ forloop.index }}"><span class="stage-number">{{ forloop.index }}</span><span>{{ stage.title | escape }}</span></h3>
       <details class="situation-details" aria-labelledby="stage-title-{{ forloop.index }}">
         <summary aria-labelledby="stage-title-{{ forloop.index }} stage-short-{{ forloop.index }}">
           <span class="situation-short" id="stage-short-{{ forloop.index }}">{{ stage.short | escape }}</span>
@@ -15,7 +15,7 @@
         <div class="prose situation-body">{{ stage.body }}</div>
       </details>
     </article>
-    {% if forloop.index == 3 %}<aside class="prose curriculum-note">{{ p.curriculum.note }}</aside>{% endif %}
     {% endfor %}
   </div>
+  <aside class="prose curriculum-note">{{ p.curriculum.note }}</aside>
 </div>

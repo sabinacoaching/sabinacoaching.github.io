@@ -8,8 +8,10 @@
   {% if p.seo.draft %}<meta name="robots" content="noindex,nofollow">{% endif %}
   <meta name="theme-color" content="#17372d">
   <link rel="stylesheet" href="{{ '/assets/mindset-lab.css' | relative_url }}?v=layout-20261027">
+  {% include transition-design.html %}
+  <link rel="stylesheet" href="{{ "/assets/transition-design.css" | relative_url }}?v=design-live-20261027">
 </head>
-<body>
+<body class="transition-landing">
   <a class="skip-link" href="#main">Перейти к тексту</a>
   <header class="site-header">
     <div class="container header-inner">
@@ -74,7 +76,7 @@
         </div>
       </div>
     </section>
-    <section class="join" id="join" aria-labelledby="join-title">
+    <section class="join tone-{{ site.data.professional_transition_design.join_tone | escape }}" id="join" aria-labelledby="join-title">
       <div class="container join-inner"><h2 id="join-title">{{ p.contact.title | escape }}</h2><div class="prose">{{ p.contact.body }}</div><a class="button button--light" href="{{ p.contact.url | escape }}" target="_blank" rel="noopener noreferrer">{{ p.contact.button | escape }}</a></div>
     </section>
   </main>

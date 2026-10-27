@@ -1,195 +1,870 @@
 content:
-  - name: professional_transition
-    label: Профессиональный переход
-    type: file
-    path: _data/professional_transition.json
-    format: json
+- name: professional_transition
+  label: Профессиональный переход
+  type: file
+  path: _data/professional_transition.json
+  format: json
+  fields:
+  - name: hero
+    label: Первый экран
+    type: object
     fields:
-      - name: hero
-        label: Первый экран
-        type: object
-        fields:
-          - { name: title, label: Название программы, type: string, required: true }
-          - name: description
-            label: Краткое описание
-            type: rich-text
-            options: { format: html, media: false, switcher: false }
-          - { name: eyebrow, label: Подпись над названием, type: string }
-          - { name: duration, label: Продолжительность, type: string }
-          - { name: meetings, label: Количество встреч, type: string }
-          - { name: group, label: Размер группы, type: string }
-          - { name: primary_label, label: Главная кнопка, type: string }
-          - { name: secondary_label, label: Ссылка на программу, type: string }
-      - name: sections
-        label: Разделы лендинга
-        type: object
-        list:
-          collapsible:
-            collapsed: true
-            summary: "{title}"
-        fields:
-          - { name: id, type: string, hidden: true }
-          - { name: has_situations, type: boolean, hidden: true }
-          - { name: has_barriers, type: boolean, hidden: true }
-          - { name: hidden, label: Скрыть раздел на сайте, type: boolean }
-          - { name: has_curriculum, type: boolean, hidden: true }
-          - { name: paired_layout, type: string, hidden: true }
-          - { name: group_id, type: string, hidden: true }
-          - { name: group_member, type: boolean, hidden: true }
-          - { name: show_question, type: boolean, hidden: true }
-          - { name: kind, type: string, hidden: true }
-          - { name: tone, type: string, hidden: true }
-          - { name: title, label: Заголовок раздела, type: string }
-          - name: body
-            label: Текст раздела
-            type: rich-text
-            options: { format: html, media: false, switcher: false }
-      - name: situations
-        label: "Ситуации: заголовки и раскрывающийся текст"
-        type: object
-        fields:
-          - { name: title, label: Заголовок блока, type: string }
-          - { name: open_label, label: Кнопка открытия всех ситуаций, type: string }
-          - { name: close_label, label: Кнопка закрытия всех ситуаций, type: string }
-          - name: cards
-            label: Ситуации
-            type: object
-            list:
-              collapsible:
-                collapsed: true
-                summary: "{title}"
-            fields:
-              - { name: title, label: Заголовок ситуации, type: string }
-              - { name: short, label: Короткая фраза, type: text }
-              - name: body
-                label: Текст после раскрытия
-                type: rich-text
-                options: { format: html, media: false, switcher: false }
-      - name: barriers
-        label: "Почему сложно решиться: карточки"
-        type: object
-        fields:
-          - { name: open_label, label: Кнопка открытия всех карточек, type: string }
-          - { name: close_label, label: Кнопка закрытия всех карточек, type: string }
-          - name: cards
-            label: Причины
-            type: object
-            list:
-              collapsible:
-                collapsed: true
-                summary: "{title}"
-            fields:
-              - { name: title, label: Название причины, type: string }
-              - name: body
-                label: Текст после раскрытия
-                type: rich-text
-                options: { format: html, media: false, switcher: false }
-          - name: afterword
-            label: Текст после карточек
-            type: rich-text
-            options: { format: html, media: false, switcher: false }
-      - name: curriculum
-        label: "Логика и содержание: пять этапов"
-        type: object
-        fields:
-          - { name: open_label, label: Кнопка открытия всех этапов, type: string }
-          - { name: close_label, label: Кнопка закрытия всех этапов, type: string }
-          - name: stages
-            label: Этапы
-            type: object
-            list:
-              collapsible:
-                collapsed: true
-                summary: "{title}"
-            fields:
-              - { name: title, label: Название этапа, type: string }
-              - { name: short, label: Видимая часть текста, type: text }
-              - name: body
-                label: Текст после раскрытия
-                type: rich-text
-                options: { format: html, media: false, switcher: false }
-          - name: note
-            label: Важно
-            type: rich-text
-            options: { format: html, media: false, switcher: false }
-      - name: conditions
-        label: Условия и стоимость
-        type: object
-        fields:
-          - { name: title, label: Заголовок, type: string }
-          - { name: duration_label, label: Подпись продолжительности, type: string }
-          - { name: duration, label: Продолжительность, type: string }
-          - { name: group_label, label: Подпись размера группы, type: string }
-          - { name: group, label: Размер группы, type: string }
-          - { name: start_label, label: Подпись начала, type: string }
-          - { name: start, label: Начало программы, type: string }
-          - { name: schedule_label, label: Подпись расписания, type: string }
-          - { name: schedule, label: День и время с часовым поясом, type: string }
-          - { name: meeting_label, label: Подпись длительности встречи, type: string }
-          - { name: meeting, label: Продолжительность встречи, type: string }
-          - { name: base_label, label: Название основного тарифа, type: string }
-          - { name: base_price, label: Стоимость основного тарифа, type: string }
-          - { name: personal_label, label: Название тарифа с личными сессиями, type: string }
-          - { name: personal_price, label: Стоимость тарифа с личными сессиями, type: string }
-          - { name: payment_label, label: Подпись оплаты, type: string }
-          - { name: payment, label: Порядок оплаты, type: text }
-      - { name: faq_title, label: Заголовок вопросов, type: string }
-      - name: faq
-        label: Вопросы и ответы
-        type: object
-        list:
-          collapsible:
-            collapsed: true
-            summary: "{question}"
-        fields:
-          - { name: question, label: Вопрос, type: string }
-          - { name: hidden, label: Скрыть вопрос на сайте, type: boolean }
-          - name: answer
-            label: Ответ
-            type: rich-text
-            options: { format: html, media: false, switcher: false }
-      - name: contact
-        label: Приглашение к участию
-        type: object
-        fields:
-          - { name: title, label: Заголовок, type: string }
-          - name: body
-            label: Текст приглашения
-            type: rich-text
-            options: { format: html, media: false, switcher: false }
-          - { name: button, label: Текст кнопки, type: string }
-          - { name: url, label: Ссылка на Telegram, type: string }
-      - name: seo
-        label: Настройки страницы
-        type: object
-        fields:
-          - { name: title, label: Название вкладки, type: string }
-          - { name: description, label: Описание страницы, type: text }
-          - { name: draft, label: "Черновик: скрыть от поисковиков", type: boolean }
+    - name: title
+      label: Название программы
+      type: string
+      required: true
+    - name: description
+      label: Краткое описание
+      type: rich-text
+      options:
+        format: html
+        media: false
+        switcher: false
+    - name: eyebrow
+      label: Подпись над названием
+      type: string
+    - name: duration
+      label: Продолжительность
+      type: string
+    - name: meetings
+      label: Количество встреч
+      type: string
+    - name: group
+      label: Размер группы
+      type: string
+    - name: primary_label
+      label: Главная кнопка
+      type: string
+    - name: secondary_label
+      label: Ссылка на программу
+      type: string
+  - name: sections
+    label: Разделы лендинга
+    type: object
+    list:
+      collapsible:
+        collapsed: true
+        summary: '{title}'
+    fields:
+    - name: id
+      type: string
+      hidden: true
+    - name: has_situations
+      type: boolean
+      hidden: true
+    - name: has_barriers
+      type: boolean
+      hidden: true
+    - name: hidden
+      label: Скрыть раздел на сайте
+      type: boolean
+    - name: has_curriculum
+      type: boolean
+      hidden: true
+    - name: paired_layout
+      type: string
+      hidden: true
+    - name: group_id
+      type: string
+      hidden: true
+    - name: group_member
+      type: boolean
+      hidden: true
+    - name: show_question
+      type: boolean
+      hidden: true
+    - name: kind
+      type: string
+      hidden: true
+    - name: tone
+      type: string
+      hidden: true
+    - name: title
+      label: Заголовок раздела
+      type: text
+      description: Перенос строки здесь задаёт перенос в заголовке на широком экране.
+    - name: body
+      label: Текст раздела
+      type: rich-text
+      options:
+        format: html
+        media: false
+        switcher: false
+  - name: situations
+    label: 'Ситуации: заголовки и раскрывающийся текст'
+    type: object
+    fields:
+    - name: title
+      label: Заголовок блока
+      type: string
+    - name: open_label
+      label: Кнопка открытия всех ситуаций
+      type: string
+    - name: close_label
+      label: Кнопка закрытия всех ситуаций
+      type: string
+    - name: cards
+      label: Ситуации
+      type: object
+      list:
+        collapsible:
+          collapsed: true
+          summary: '{title}'
+      fields:
+      - name: title
+        label: Заголовок ситуации
+        type: string
+      - name: short
+        label: Короткая фраза
+        type: text
+      - name: body
+        label: Текст после раскрытия
+        type: rich-text
+        options:
+          format: html
+          media: false
+          switcher: false
+  - name: barriers
+    label: 'Почему сложно решиться: карточки'
+    type: object
+    fields:
+    - name: open_label
+      label: Кнопка открытия всех карточек
+      type: string
+    - name: close_label
+      label: Кнопка закрытия всех карточек
+      type: string
+    - name: cards
+      label: Причины
+      type: object
+      list:
+        collapsible:
+          collapsed: true
+          summary: '{title}'
+      fields:
+      - name: title
+        label: Название причины
+        type: string
+      - name: body
+        label: Текст после раскрытия
+        type: rich-text
+        options:
+          format: html
+          media: false
+          switcher: false
+    - name: afterword
+      label: Текст после карточек
+      type: rich-text
+      options:
+        format: html
+        media: false
+        switcher: false
+  - name: curriculum
+    label: 'Логика и содержание: пять этапов'
+    type: object
+    fields:
+    - name: open_label
+      label: Кнопка открытия всех этапов
+      type: string
+    - name: close_label
+      label: Кнопка закрытия всех этапов
+      type: string
+    - name: stages
+      label: Этапы
+      type: object
+      list:
+        collapsible:
+          collapsed: true
+          summary: '{title}'
+      fields:
+      - name: title
+        label: Название этапа
+        type: string
+      - name: short
+        label: Видимая часть текста
+        type: text
+      - name: body
+        label: Текст после раскрытия
+        type: rich-text
+        options:
+          format: html
+          media: false
+          switcher: false
+    - name: note
+      label: Важно
+      type: rich-text
+      options:
+        format: html
+        media: false
+        switcher: false
+  - name: conditions
+    label: Условия и стоимость
+    type: object
+    fields:
+    - name: title
+      label: Заголовок
+      type: string
+    - name: duration_label
+      label: Подпись продолжительности
+      type: string
+    - name: duration
+      label: Продолжительность
+      type: string
+    - name: group_label
+      label: Подпись размера группы
+      type: string
+    - name: group
+      label: Размер группы
+      type: string
+    - name: start_label
+      label: Подпись начала
+      type: string
+    - name: start
+      label: Начало программы
+      type: string
+    - name: schedule_label
+      label: Подпись расписания
+      type: string
+    - name: schedule
+      label: День и время с часовым поясом
+      type: string
+    - name: meeting_label
+      label: Подпись длительности встречи
+      type: string
+    - name: meeting
+      label: Продолжительность встречи
+      type: string
+    - name: base_label
+      label: Название основного тарифа
+      type: string
+    - name: base_price
+      label: Стоимость основного тарифа
+      type: string
+    - name: personal_label
+      label: Название тарифа с личными сессиями
+      type: string
+    - name: personal_price
+      label: Стоимость тарифа с личными сессиями
+      type: string
+    - name: payment_label
+      label: Подпись оплаты
+      type: string
+    - name: payment
+      label: Порядок оплаты
+      type: text
+  - name: faq_title
+    label: Заголовок вопросов
+    type: string
+  - name: faq
+    label: Вопросы и ответы
+    type: object
+    list:
+      collapsible:
+        collapsed: true
+        summary: '{question}'
+    fields:
+    - name: question
+      label: Вопрос
+      type: string
+    - name: hidden
+      label: Скрыть вопрос на сайте
+      type: boolean
+    - name: answer
+      label: Ответ
+      type: rich-text
+      options:
+        format: html
+        media: false
+        switcher: false
+  - name: contact
+    label: Приглашение к участию
+    type: object
+    fields:
+    - name: title
+      label: Заголовок
+      type: string
+    - name: body
+      label: Текст приглашения
+      type: rich-text
+      options:
+        format: html
+        media: false
+        switcher: false
+    - name: button
+      label: Текст кнопки
+      type: string
+    - name: url
+      label: Ссылка на Telegram
+      type: string
+  - name: seo
+    label: Настройки страницы
+    type: object
+    fields:
+    - name: title
+      label: Название вкладки
+      type: string
+    - name: description
+      label: Описание страницы
+      type: text
+    - name: draft
+      label: 'Черновик: скрыть от поисковиков'
+      type: boolean
+- name: professional_transition_design
+  label: Оформление лендинга
+  type: file
+  path: _data/professional_transition_design.json
+  format: json
+  fields:
+  - name: palette
+    label: Цвета
+    type: object
+    fields:
+    - name: green
+      label: Тёмный фон
+      type: select
+      options:
+        values:
+        - name: '#17372d'
+          label: Исходный зелёный
+        - name: '#102920'
+          label: Тёмно-зелёный подвала
+        - name: '#1b2a23'
+          label: Тёмный текст
+        - name: '#faf8f2'
+          label: Светлый фон
+        - name: '#f0ebe1'
+          label: Бежевый
+        - name: '#FFFFFF'
+          label: Белый
+        - name: '#b54d35'
+          label: Коралловый
+        - name: '#58645c'
+          label: Приглушённый текст
+        - name: '#e4b49d'
+          label: Насыщенный персиковый
+        - name: '#e8c3b1'
+          label: Светлый персиковый
+      description: Выберите цвет из палитры сайта.
+    - name: deep
+      label: Самый тёмный фон
+      type: select
+      options:
+        values:
+        - name: '#17372d'
+          label: Исходный зелёный
+        - name: '#102920'
+          label: Тёмно-зелёный подвала
+        - name: '#1b2a23'
+          label: Тёмный текст
+        - name: '#faf8f2'
+          label: Светлый фон
+        - name: '#f0ebe1'
+          label: Бежевый
+        - name: '#FFFFFF'
+          label: Белый
+        - name: '#b54d35'
+          label: Коралловый
+        - name: '#58645c'
+          label: Приглушённый текст
+        - name: '#e4b49d'
+          label: Насыщенный персиковый
+        - name: '#e8c3b1'
+          label: Светлый персиковый
+      description: Выберите цвет из палитры сайта.
+    - name: ink
+      label: Основной текст
+      type: select
+      options:
+        values:
+        - name: '#17372d'
+          label: Исходный зелёный
+        - name: '#102920'
+          label: Тёмно-зелёный подвала
+        - name: '#1b2a23'
+          label: Тёмный текст
+        - name: '#faf8f2'
+          label: Светлый фон
+        - name: '#f0ebe1'
+          label: Бежевый
+        - name: '#FFFFFF'
+          label: Белый
+        - name: '#b54d35'
+          label: Коралловый
+        - name: '#58645c'
+          label: Приглушённый текст
+        - name: '#e4b49d'
+          label: Насыщенный персиковый
+        - name: '#e8c3b1'
+          label: Светлый персиковый
+      description: Выберите цвет из палитры сайта.
+    - name: light
+      label: Основной светлый фон
+      type: select
+      options:
+        values:
+        - name: '#17372d'
+          label: Исходный зелёный
+        - name: '#102920'
+          label: Тёмно-зелёный подвала
+        - name: '#1b2a23'
+          label: Тёмный текст
+        - name: '#faf8f2'
+          label: Светлый фон
+        - name: '#f0ebe1'
+          label: Бежевый
+        - name: '#FFFFFF'
+          label: Белый
+        - name: '#b54d35'
+          label: Коралловый
+        - name: '#58645c'
+          label: Приглушённый текст
+        - name: '#e4b49d'
+          label: Насыщенный персиковый
+        - name: '#e8c3b1'
+          label: Светлый персиковый
+      description: Выберите цвет из палитры сайта.
+    - name: paper
+      label: Второй светлый фон
+      type: select
+      options:
+        values:
+        - name: '#17372d'
+          label: Исходный зелёный
+        - name: '#102920'
+          label: Тёмно-зелёный подвала
+        - name: '#1b2a23'
+          label: Тёмный текст
+        - name: '#faf8f2'
+          label: Светлый фон
+        - name: '#f0ebe1'
+          label: Бежевый
+        - name: '#FFFFFF'
+          label: Белый
+        - name: '#b54d35'
+          label: Коралловый
+        - name: '#58645c'
+          label: Приглушённый текст
+        - name: '#e4b49d'
+          label: Насыщенный персиковый
+        - name: '#e8c3b1'
+          label: Светлый персиковый
+      description: Выберите цвет из палитры сайта.
+    - name: card
+      label: Карточки ситуаций и причин
+      type: select
+      options:
+        values:
+        - name: '#17372d'
+          label: Исходный зелёный
+        - name: '#102920'
+          label: Тёмно-зелёный подвала
+        - name: '#1b2a23'
+          label: Тёмный текст
+        - name: '#faf8f2'
+          label: Светлый фон
+        - name: '#f0ebe1'
+          label: Бежевый
+        - name: '#FFFFFF'
+          label: Белый
+        - name: '#b54d35'
+          label: Коралловый
+        - name: '#58645c'
+          label: Приглушённый текст
+        - name: '#e4b49d'
+          label: Насыщенный персиковый
+        - name: '#e8c3b1'
+          label: Светлый персиковый
+      description: Выберите цвет из палитры сайта.
+    - name: white
+      label: Карточки результатов и этапов
+      type: select
+      options:
+        values:
+        - name: '#17372d'
+          label: Исходный зелёный
+        - name: '#102920'
+          label: Тёмно-зелёный подвала
+        - name: '#1b2a23'
+          label: Тёмный текст
+        - name: '#faf8f2'
+          label: Светлый фон
+        - name: '#f0ebe1'
+          label: Бежевый
+        - name: '#FFFFFF'
+          label: Белый
+        - name: '#b54d35'
+          label: Коралловый
+        - name: '#58645c'
+          label: Приглушённый текст
+        - name: '#e4b49d'
+          label: Насыщенный персиковый
+        - name: '#e8c3b1'
+          label: Светлый персиковый
+      description: Выберите цвет из палитры сайта.
+    - name: accent
+      label: 'Кнопки: коралловый акцент'
+      type: select
+      options:
+        values:
+        - name: '#17372d'
+          label: Исходный зелёный
+        - name: '#102920'
+          label: Тёмно-зелёный подвала
+        - name: '#1b2a23'
+          label: Тёмный текст
+        - name: '#faf8f2'
+          label: Светлый фон
+        - name: '#f0ebe1'
+          label: Бежевый
+        - name: '#FFFFFF'
+          label: Белый
+        - name: '#b54d35'
+          label: Коралловый
+        - name: '#58645c'
+          label: Приглушённый текст
+        - name: '#e4b49d'
+          label: Насыщенный персиковый
+        - name: '#e8c3b1'
+          label: Светлый персиковый
+      description: Выберите цвет из палитры сайта.
+    - name: accent_ink
+      label: Текст на кнопках
+      type: select
+      options:
+        values:
+        - name: '#17372d'
+          label: Исходный зелёный
+        - name: '#102920'
+          label: Тёмно-зелёный подвала
+        - name: '#1b2a23'
+          label: Тёмный текст
+        - name: '#faf8f2'
+          label: Светлый фон
+        - name: '#f0ebe1'
+          label: Бежевый
+        - name: '#FFFFFF'
+          label: Белый
+        - name: '#b54d35'
+          label: Коралловый
+        - name: '#58645c'
+          label: Приглушённый текст
+        - name: '#e4b49d'
+          label: Насыщенный персиковый
+        - name: '#e8c3b1'
+          label: Светлый персиковый
+      description: Выберите цвет из палитры сайта.
+    - name: muted
+      label: Второстепенный текст
+      type: select
+      options:
+        values:
+        - name: '#17372d'
+          label: Исходный зелёный
+        - name: '#102920'
+          label: Тёмно-зелёный подвала
+        - name: '#1b2a23'
+          label: Тёмный текст
+        - name: '#faf8f2'
+          label: Светлый фон
+        - name: '#f0ebe1'
+          label: Бежевый
+        - name: '#FFFFFF'
+          label: Белый
+        - name: '#b54d35'
+          label: Коралловый
+        - name: '#58645c'
+          label: Приглушённый текст
+        - name: '#e4b49d'
+          label: Насыщенный персиковый
+        - name: '#e8c3b1'
+          label: Светлый персиковый
+      description: Выберите цвет из палитры сайта.
+    - name: promo
+      label: 'Плашки: фон'
+      type: select
+      options:
+        values:
+        - name: '#17372d'
+          label: Исходный зелёный
+        - name: '#102920'
+          label: Тёмно-зелёный подвала
+        - name: '#1b2a23'
+          label: Тёмный текст
+        - name: '#faf8f2'
+          label: Светлый фон
+        - name: '#f0ebe1'
+          label: Бежевый
+        - name: '#FFFFFF'
+          label: Белый
+        - name: '#b54d35'
+          label: Коралловый
+        - name: '#58645c'
+          label: Приглушённый текст
+        - name: '#e4b49d'
+          label: Насыщенный персиковый
+        - name: '#e8c3b1'
+          label: Светлый персиковый
+      description: Выберите цвет из палитры сайта.
+    - name: promo_ink
+      label: 'Плашки: цвет текста'
+      type: select
+      options:
+        values:
+        - name: '#17372d'
+          label: Исходный зелёный
+        - name: '#102920'
+          label: Тёмно-зелёный подвала
+        - name: '#1b2a23'
+          label: Тёмный текст
+        - name: '#faf8f2'
+          label: Светлый фон
+        - name: '#f0ebe1'
+          label: Бежевый
+        - name: '#FFFFFF'
+          label: Белый
+        - name: '#b54d35'
+          label: Коралловый
+        - name: '#58645c'
+          label: Приглушённый текст
+        - name: '#e4b49d'
+          label: Насыщенный персиковый
+        - name: '#e8c3b1'
+          label: Светлый персиковый
+      description: Выберите цвет из палитры сайта.
+  - name: layout
+    label: Размеры и расстояния
+    type: object
+    fields:
+    - name: hero_title_size
+      label: Размер названия программы (пиксели)
+      type: number
+      options:
+        min: 38
+        max: 72
+    - name: hero_text_size
+      label: Размер текста первого экрана (пиксели)
+      type: number
+      options:
+        min: 16
+        max: 24
+    - name: hero_text_width
+      label: Ширина текста первого экрана (пиксели)
+      type: number
+      options:
+        min: 480
+        max: 850
+    - name: hero_title_width
+      label: Ширина названия программы (пиксели)
+      type: number
+      options:
+        min: 520
+        max: 950
+    - name: hero_padding_top
+      label: Отступ сверху первого экрана (пиксели)
+      type: number
+      options:
+        min: 28
+        max: 100
+    - name: hero_padding_bottom
+      label: Отступ снизу первого экрана (пиксели)
+      type: number
+      options:
+        min: 28
+        max: 100
+    - name: comparison_gap
+      label: Расстояние между двумя вариантами будущего (пиксели)
+      type: number
+      options:
+        min: 80
+        max: 180
+    - name: comparison_title_size
+      label: Размер заголовков двух вариантов будущего (пиксели)
+      type: number
+      options:
+        min: 26
+        max: 38
+    - name: section_spacing
+      label: Отступы сверху и снизу разделов (пиксели)
+      type: number
+      options:
+        min: 48
+        max: 120
+    - name: promo_width
+      label: Ширина акцентных плашек (пиксели)
+      type: number
+      options:
+        min: 700
+        max: 1060
+    - name: promo_offset
+      label: Отступ перед акцентной плашкой (пиксели)
+      type: number
+      options:
+        min: 24
+        max: 80
+    - name: note_width
+      label: Ширина примечания «Важно» (пиксели)
+      type: number
+      options:
+        min: 700
+        max: 1060
+    - name: card_radius
+      label: Скругление углов карточек (пиксели)
+      type: number
+      options:
+        min: 0
+        max: 24
+  - name: section_tones
+    label: Фоны разделов
+    type: object
+    fields:
+    - name: recognition
+      label: Ситуации
+      type: select
+      options:
+        values:
+        - name: green
+          label: Зелёный фон
+        - name: light
+          label: Светлый фон
+        - name: paper
+          label: Бежевый фон
+    - name: trajectory
+      label: Два варианта будущего
+      type: select
+      options:
+        values:
+        - name: green
+          label: Зелёный фон
+        - name: light
+          label: Светлый фон
+        - name: paper
+          label: Бежевый фон
+    - name: barriers
+      label: Почему сложно решиться
+      type: select
+      options:
+        values:
+        - name: green
+          label: Зелёный фон
+        - name: light
+          label: Светлый фон
+        - name: paper
+          label: Бежевый фон
+    - name: outcomes
+      label: Результаты программы
+      type: select
+      options:
+        values:
+        - name: green
+          label: Зелёный фон
+        - name: light
+          label: Светлый фон
+        - name: paper
+          label: Бежевый фон
+    - name: format
+      label: Формат и участники
+      type: select
+      options:
+        values:
+        - name: green
+          label: Зелёный фон
+        - name: light
+          label: Светлый фон
+        - name: paper
+          label: Бежевый фон
+    - name: program
+      label: Пять этапов
+      type: select
+      options:
+        values:
+        - name: green
+          label: Зелёный фон
+        - name: light
+          label: Светлый фон
+        - name: paper
+          label: Бежевый фон
+    - name: about
+      label: Кто ведёт
+      type: select
+      options:
+        values:
+        - name: green
+          label: Зелёный фон
+        - name: light
+          label: Светлый фон
+        - name: paper
+          label: Бежевый фон
+    - name: faq
+      label: Вопросы
+      type: select
+      options:
+        values:
+        - name: green
+          label: Зелёный фон
+        - name: light
+          label: Светлый фон
+        - name: paper
+          label: Бежевый фон
+  - name: conditions_tone
+    label: Фон условий участия
+    type: select
+    options:
+      values:
+      - name: green
+        label: Зелёный фон
+      - name: light
+        label: Светлый фон
+      - name: paper
+        label: Бежевый фон
+  - name: join_tone
+    label: Фон финального приглашения
+    type: select
+    options:
+      values:
+      - name: green
+        label: Зелёный фон
+      - name: light
+        label: Светлый фон
+      - name: paper
+        label: Бежевый фон
+- name: programs
+  label: Каталог программ
+  type: file
+  path: _data/programs.json
+  format: json
+  fields:
+  - name: brand
+    label: Название сайта
+    type: string
+  - name: title
+    label: Заголовок
+    type: string
+  - name: intro
+    label: Вступление
+    type: text
   - name: programs
-    label: Каталог программ
-    type: file
-    path: _data/programs.json
-    format: json
+    label: Программы
+    type: object
+    list:
+      collapsible:
+        collapsed: true
+        summary: '{title}'
     fields:
-      - { name: brand, label: Название сайта, type: string }
-      - { name: title, label: Заголовок, type: string }
-      - { name: intro, label: Вступление, type: text }
-      - name: programs
-        label: Программы
-        type: object
-        list:
-          collapsible:
-            collapsed: true
-            summary: "{title}"
-        fields:
-          - { name: title, label: Название, type: string }
-          - { name: description, label: Описание, type: text }
-          - { name: meta, label: Кратко о формате, type: string }
-          - { name: url, label: Адрес страницы, type: string }
-          - { name: button, label: Текст кнопки, type: string }
+    - name: title
+      label: Название
+      type: string
+    - name: description
+      label: Описание
+      type: text
+    - name: meta
+      label: Кратко о формате
+      type: string
+    - name: url
+      label: Адрес страницы
+      type: string
+    - name: button
+      label: Текст кнопки
+      type: string
 settings:
   content:
     merge: true
-
-
