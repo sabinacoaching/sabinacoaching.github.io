@@ -1,0 +1,26 @@
+{
+  "a": {
+    "green": "#173C31",
+    "deep": "#102D25",
+    "ink": "#20372C",
+    "light": "#FBF9F3",
+    "paper": "#F0EDE3",
+    "card": "#F5E3D8",
+    "white": "#FFFFFF",
+    "accent": "#DABD63",
+    "accent_ink": "#18392E",
+    "muted": "#5B685E"
+  },
+  "b": {
+    "green": "#20434B",
+    "deep": "#152E35",
+    "ink": "#203941",
+    "light": "#F6F9F9",
+    "paper": "#E7EEEE",
+    "card": "#E4ECEF",
+    "white": "#FFFFFF",
+    "accent": "#BAD5E4",
+    "accent_ink": "#173944",
+    "muted": "#566B73"
+  }
+}

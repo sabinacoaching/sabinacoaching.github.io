@@ -1,0 +1,78 @@
+{% assign d = site.data.professional_transition_design %}
+<style id="author-design">
+:root {
+  --green: {{ d.palette.green | escape }};
+  --deep: {{ d.palette.deep | escape }};
+  --ink: {{ d.palette.ink | escape }};
+  --light: {{ d.palette.light | escape }};
+  --paper: {{ d.palette.paper | escape }};
+  --card: {{ d.palette.card | escape }};
+  --white: {{ d.palette.white | escape }};
+  --accent: {{ d.palette.accent | escape }};
+  --accent-ink: {{ d.palette.accent_ink | escape }};
+  --muted: {{ d.palette.muted | escape }};
+  --clay: {{ d.palette.accent | escape }};
+  --hero-title-size: {{ d.layout.hero_title_size }}px;
+  --hero-text-size: {{ d.layout.hero_text_size }}px;
+  --hero-text-width: {{ d.layout.hero_text_width }}px;
+  --hero-title-width: {{ d.layout.hero_title_width }}px;
+  --hero-padding-top: {{ d.layout.hero_padding_top }}px;
+  --hero-padding-bottom: {{ d.layout.hero_padding_bottom }}px;
+  --comparison-gap: {{ d.layout.comparison_gap }}px;
+  --comparison-title-size: {{ d.layout.comparison_title_size }}px;
+  --section-spacing: {{ d.layout.section_spacing }}px;
+  --promo-width: {{ d.layout.promo_width }}px;
+  --promo-offset: {{ d.layout.promo_offset }}px;
+  --note-width: {{ d.layout.note_width }}px;
+  --card-radius: {{ d.layout.card_radius }}px;
+}
+
+#recognition { background: var(--{{ d.section_tones.recognition | escape }}); }
+{% if d.section_tones.recognition == 'green' %}#recognition { color: var(--light); }
+{% endif %}
+{% unless d.section_tones.recognition == 'green' %}#recognition { color: var(--ink); }
+{% endunless %}
+#recognition h2, #recognition h3, #recognition .prose { color: inherit; }
+#trajectory { background: var(--{{ d.section_tones.trajectory | escape }}); }
+{% if d.section_tones.trajectory == 'green' %}#trajectory { color: var(--light); }
+{% endif %}
+{% unless d.section_tones.trajectory == 'green' %}#trajectory { color: var(--ink); }
+{% endunless %}
+#trajectory h2, #trajectory h3, #trajectory .prose { color: inherit; }
+#barriers { background: var(--{{ d.section_tones.barriers | escape }}); }
+{% if d.section_tones.barriers == 'green' %}#barriers { color: var(--light); }
+{% endif %}
+{% unless d.section_tones.barriers == 'green' %}#barriers { color: var(--ink); }
+{% endunless %}
+#barriers h2, #barriers h3, #barriers .prose { color: inherit; }
+#outcomes { background: var(--{{ d.section_tones.outcomes | escape }}); }
+{% if d.section_tones.outcomes == 'green' %}#outcomes { color: var(--light); }
+{% endif %}
+{% unless d.section_tones.outcomes == 'green' %}#outcomes { color: var(--ink); }
+{% endunless %}
+#outcomes h2, #outcomes h3, #outcomes .prose { color: inherit; }
+#format { background: var(--{{ d.section_tones.format | escape }}); }
+{% if d.section_tones.format == 'green' %}#format { color: var(--light); }
+{% endif %}
+{% unless d.section_tones.format == 'green' %}#format { color: var(--ink); }
+{% endunless %}
+#format h2, #format h3, #format .prose { color: inherit; }
+#program { background: var(--{{ d.section_tones.program | escape }}); }
+{% if d.section_tones.program == 'green' %}#program { color: var(--light); }
+{% endif %}
+{% unless d.section_tones.program == 'green' %}#program { color: var(--ink); }
+{% endunless %}
+#program h2, #program h3, #program .prose { color: inherit; }
+#about { background: var(--{{ d.section_tones.about | escape }}); }
+{% if d.section_tones.about == 'green' %}#about { color: var(--light); }
+{% endif %}
+{% unless d.section_tones.about == 'green' %}#about { color: var(--ink); }
+{% endunless %}
+#about h2, #about h3, #about .prose { color: inherit; }
+#faq { background: var(--{{ d.section_tones.faq | escape }}); }
+{% if d.section_tones.faq == 'green' %}#faq { color: var(--light); }
+{% endif %}
+{% unless d.section_tones.faq == 'green' %}#faq { color: var(--ink); }
+{% endunless %}
+#faq h2, #faq h3, #faq .prose { color: inherit; }
+</style>

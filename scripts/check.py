@@ -23,6 +23,11 @@ def check_fields(data, fields, trail):
             assert isinstance(value,str), here
             assert field.get('options',{}).get('format')=='html', here
         elif field['type']=='boolean': assert isinstance(value,bool),here
+        elif field['type']=='number':
+            assert isinstance(value,(int,float)),here
+            assert field['options']['min']<=value<=field['options']['max'],here
+        elif field['type']=='select':
+            assert value in [v['name'] if isinstance(v,dict) else v for v in field['options']['values']],here
         elif field['type'] in ('string','text'): assert isinstance(value,str),here
         else: raise AssertionError('Unexpected field '+here)
 
@@ -32,6 +37,8 @@ for entry in config['content']:
 data={p.stem:json.loads(p.read_text()) for p in (ROOT/'_data').glob('*.json')}
 changed=copy.deepcopy(data)
 changed['professional_transition']['hero']['title']='Проверка самостоятельной правки'
+changed['professional_transition_design']['palette']['green']='#123456'
+changed['professional_transition_design']['layout']['hero_text_width']=640
 changed['professional_transition']['sections'][0]['body']='<p><strong>Новый абзац автора</strong></p>'
 changed['professional_transition']['conditions']['base_price']='81 000 руб.'
 changed['professional_transition']['faq'][0]['hidden']=False
@@ -42,6 +49,8 @@ rendered=render((ROOT/'programs/professional-transition/index.html').read_text()
 for value in ['Проверка самостоятельной правки','<strong>Новый абзац автора</strong>','81 000 руб.','Новый ответ автора','Изменённый заголовок ситуации','Изменённая короткая фраза','Изменённый раскрывающийся текст','Новый раздел','tone-light']:
     assert value in rendered, value
 assert 'id="11"' in rendered
+assert '--green: #123456;' in rendered
+assert '--hero-text-width: 640px;' in rendered
 assert '{{' not in rendered and '{%' not in rendered
 changed['professional_transition']['seo']['draft']=False
 public=render((ROOT/'programs/professional-transition/index.html').read_text(),{'site':{'data':changed,'baseurl':'/test'}})
@@ -86,3 +95,8 @@ for invalid in ['жизнеобращующими','надо перечисли�
     assert invalid not in new,invalid
 print('Passed: CMS coverage, edit-to-page rendering, new sections, draft toggle, base URL, links, anchors and content checks.')
 
+
+assert new.count('class="stage-number"')==5
+assert new.index('class="prose curriculum-note"')>new.index('id="stage-title-5"')
+assert "position:static" in (ROOT/'assets/transition-design.css').read_text()
+print('Passed: author design settings, five numbered stages, note after fifth stage.')
