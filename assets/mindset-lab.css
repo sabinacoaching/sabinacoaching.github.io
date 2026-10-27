@@ -19,3 +19,32 @@
   .page-menu nav>.nav-cta{margin-top:5px;text-align:center;border-radius:99px}
 }
 
+
+/* Recognisable situations: eight cards and one full-width card. */
+.situations{margin-top:46px}
+.situations-toolbar{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:28px}
+.situations-toolbar h3{font-size:clamp(27px,3vw,34px);line-height:1.2;margin:0}
+.situations-controls{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:10px 20px;flex-shrink:0}
+.situations-control{border:0;border-bottom:1px solid var(--line);padding:5px 0;background:none;color:var(--green);font:400 14px/1.4 Arial,Helvetica,sans-serif;cursor:pointer}
+.situations-control:hover{color:var(--clay);border-color:currentColor}
+.situations-control[hidden]{display:none}
+.situations-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;align-items:start}
+.situation-card{min-width:0;padding:28px 28px 25px;background:var(--paper);border:1px solid var(--line);border-radius:4px}
+.situation-card--wide{grid-column:1/-1}
+.situation-title{margin:0 0 18px;font:400 clamp(24px,2.3vw,29px)/1.22 Georgia,'Times New Roman',serif;letter-spacing:-.025em;text-wrap:balance;overflow-wrap:break-word}
+.situation-details{border:0}
+.situation-details>summary{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;list-style:none;padding:0;font:400 17px/1.6 Arial,Helvetica,sans-serif;color:var(--ink)}
+.situation-details>summary::-webkit-details-marker{display:none}
+.situation-details .situation-short,.situation-details[open]>summary .situation-short{min-width:0;flex:1;transform:none;color:inherit;font:inherit}
+.situation-details .situation-icon,.situation-details[open]>summary .situation-icon{position:relative;display:block;flex:0 0 34px;width:34px;height:34px;margin-top:2px;border:1px solid var(--line);border-radius:50%;transform:none;color:var(--green);transition:background .15s,border-color .15s}
+.situation-icon:before,.situation-icon:after{content:'';position:absolute;left:10px;top:15px;width:12px;height:2px;background:currentColor}
+.situation-icon:after{transform:rotate(90deg);transition:transform .15s}
+.situation-details[open] .situation-icon:after{transform:rotate(0)}
+.situation-details>summary:hover .situation-icon{background:#fff8;border-color:var(--green)}
+.situation-body{max-width:none;margin-top:22px;padding-top:20px;border-top:1px solid var(--line);font-size:16px;line-height:1.7}
+.situation-body p{margin:0 0 1.2em}
+.situation-body p:last-child{margin-bottom:0}
+@media(max-width:950px){.situation-card{padding:25px}.situations-toolbar{align-items:flex-start}.situations-controls{max-width:210px}}
+@media(max-width:640px){.situations{margin-top:34px}.situations-toolbar{display:block;margin-bottom:22px}.situations-toolbar h3{font-size:28px}.situations-controls{max-width:none;justify-content:flex-start;margin-top:16px;gap:20px}.situations-grid{grid-template-columns:1fr;gap:16px}.situation-card{padding:23px 21px}.situation-title{font-size:25px;margin-bottom:16px}.situation-details>summary{gap:16px;font-size:16px}.situation-body{margin-top:20px;padding-top:18px}}
+
+

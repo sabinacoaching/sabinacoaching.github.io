@@ -1,0 +1,23 @@
+<div class="situations" id="situations" data-situations>
+  <div class="situations-toolbar">
+    <h3>{{ p.situations.title | escape }}</h3>
+    <div class="situations-controls" role="group" aria-label="Управление раскрытием ситуаций">
+      <button type="button" class="situations-control" data-situations-action="open" aria-controls="situations-grid" hidden>{{ p.situations.open_label | escape }}</button>
+      <button type="button" class="situations-control" data-situations-action="close" aria-controls="situations-grid" hidden>{{ p.situations.close_label | escape }}</button>
+    </div>
+  </div>
+  <div class="situations-grid" id="situations-grid">
+    {% for card in p.situations.cards %}
+    <article class="situation-card{% if forloop.last %} situation-card--wide{% endif %}">
+      <h4 class="situation-title" id="situation-title-{{ forloop.index }}">{{ card.title | escape }}</h4>
+      <details class="situation-details" aria-labelledby="situation-title-{{ forloop.index }}">
+        <summary aria-labelledby="situation-title-{{ forloop.index }} situation-short-{{ forloop.index }}">
+          <span class="situation-short" id="situation-short-{{ forloop.index }}">{{ card.short | escape }}</span>
+          <span class="situation-icon" aria-hidden="true"></span>
+        </summary>
+        <div class="prose situation-body">{{ card.body }}</div>
+      </details>
+    </article>
+    {% endfor %}
+  </div>
+</div>

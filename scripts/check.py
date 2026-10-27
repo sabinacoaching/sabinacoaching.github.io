@@ -35,16 +35,17 @@ changed['professional_transition']['hero']['title']='Проверка самос
 changed['professional_transition']['sections'][0]['body']='<p><strong>Новый абзац автора</strong></p>'
 changed['professional_transition']['conditions']['base_price']='81 000 руб.'
 changed['professional_transition']['faq'][0]['answer']='<p>Новый ответ автора</p>'
+changed['professional_transition']['situations']['cards'][0].update({'title':'Изменённый заголовок ситуации','short':'Изменённая короткая фраза','body':'<p>Изменённый раскрывающийся текст</p>'})
 changed['professional_transition']['sections'].append({'title':'Новый раздел','body':'<p>Дополнение</p>'})
 rendered=render((ROOT/'programs/professional-transition/index.html').read_text(),{'site':{'data':changed,'baseurl':''}})
-for value in ['Проверка самостоятельной правки','<strong>Новый абзац автора</strong>','81 000 руб.','Новый ответ автора','Новый раздел','tone-light']:
+for value in ['Проверка самостоятельной правки','<strong>Новый абзац автора</strong>','81 000 руб.','Новый ответ автора','Изменённый заголовок ситуации','Изменённая короткая фраза','Изменённый раскрывающийся текст','Новый раздел','tone-light']:
     assert value in rendered, value
 assert 'id="11"' in rendered
 assert '{{' not in rendered and '{%' not in rendered
 changed['professional_transition']['seo']['draft']=False
 public=render((ROOT/'programs/professional-transition/index.html').read_text(),{'site':{'data':changed,'baseurl':'/test'}})
 assert 'noindex,nofollow' not in public
-assert 'href="/test/assets/mindset-lab.css?v=menu-20261022"' in public
+assert 'href="/test/assets/mindset-lab.css?v=situations-20261027"' in public
 
 class Page(HTMLParser):
     def __init__(self): super().__init__();self.ids=[];self.links=[]
@@ -71,3 +72,4 @@ new=(OUT/'programs/professional-transition/index.html').read_text()
 for invalid in ['жизнеобращующими','надо перечислить','этот пункт был решением','[STORY_SPACE]','Здесь дальше будет история','—']:
     assert invalid not in new,invalid
 print('Passed: CMS coverage, edit-to-page rendering, new sections, draft toggle, base URL, links, anchors and content checks.')
+

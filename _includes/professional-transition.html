@@ -7,7 +7,7 @@
   <meta name="description" content="{{ p.seo.description | escape }}">
   {% if p.seo.draft %}<meta name="robots" content="noindex,nofollow">{% endif %}
   <meta name="theme-color" content="#17372d">
-  <link rel="stylesheet" href="{{ '/assets/mindset-lab.css' | relative_url }}?v=menu-20261022">
+  <link rel="stylesheet" href="{{ '/assets/mindset-lab.css' | relative_url }}?v=situations-20261027">
 </head>
 <body>
   <a class="skip-link" href="#main">Перейти к тексту</a>
@@ -48,6 +48,7 @@
       <div class="container section-inner">
         <div class="section-heading"><p class="section-number" aria-hidden="true">{{ forloop.index }}</p><h2 id="title-{{ section_id | escape }}">{{ section.title | escape }}</h2></div>
         <div class="prose section-body">{{ section.body }}</div>
+        {% if section.has_situations %}{% include situations.html %}{% endif %}
       </div>
     </section>
     {% endfor %}
@@ -84,6 +85,8 @@
     </section>
   </main>
   <footer class="footer"><div class="container footer-inner"><a class="brand" href="{{ '/programs/' | relative_url }}">{{ site.data.programs.brand | escape }}</a><div><a href="{{ '/programs/' | relative_url }}">Программы</a><a href="{{ '/editor/' | relative_url }}">Редактировать страницу</a><a href="#top">Наверх ↑</a></div></div></footer>
+  <script src="{{ '/assets/situations.js' | relative_url }}?v=20261027" defer></script>
 </body>
 </html>
+
 
