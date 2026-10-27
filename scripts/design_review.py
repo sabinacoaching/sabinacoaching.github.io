@@ -4,6 +4,7 @@ import copy, json, html, re, sys
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'scripts'))
 from preview import build
+ONLY_A='--variant-a' in sys.argv
 build()
 out=ROOT/'.preview'
 base=json.loads((ROOT/'_data/professional_transition_design.json').read_text())
@@ -22,7 +23,8 @@ LABELS={
  'comparison_gap':'Расстояние между колонками','comparison_title_size':'Заголовки сравнения','section_spacing':'Отступы разделов','promo_width':'Ширина цветных плашек','promo_offset':'Отступ перед плашкой','note_width':'Ширина «Важно»','card_radius':'Скругление карточек'
 }
 RANGES={'hero_title_size':(38,72),'hero_text_size':(16,24),'hero_text_width':(480,850),'hero_title_width':(520,950),'hero_padding_top':(28,100),'hero_padding_bottom':(28,100),'comparison_gap':(80,180),'comparison_title_size':(26,38),'section_spacing':(48,120),'promo_width':(700,1060),'promo_offset':(24,80),'note_width':(700,1060),'card_radius':(0,24)}
-panel='''<div class="review-toolbar"><div><strong>Mindset Lab</strong><span class="review-caption">Макет. Изменения не опубликованы.</span></div><div class="review-actions"><button data-palette="a">А: зелёный / охра</button><button data-palette="b">Б: сине-зелёный / голубой</button><button id="review-settings" aria-expanded="false">Оформление</button></div></div><aside id="design-panel" hidden><div class="design-panel-header"><strong>Оформление макета</strong><button id="review-close" aria-label="Закрыть настройки">×</button></div><p>Изменения сразу видны на макете. Сохраняются в этом браузере и не публикуются на сайт.</p><h3>Цвета</h3>'''
+panel='''<div class="review-toolbar"><div><strong>Mindset Lab</strong><span class="review-caption">Макет. Изменения не опубликованы.</span></div><div class="review-actions"><button data-palette="a">А: исходный зелёный / коралловый</button><button data-palette="b">Б: сине-зелёный / голубой</button><button id="review-settings" aria-expanded="false">Оформление</button></div></div><aside id="design-panel" hidden><div class="design-panel-header"><strong>Оформление макета</strong><button id="review-close" aria-label="Закрыть настройки">×</button></div><p>Изменения сразу видны на макете. Сохраняются в этом браузере и не публикуются на сайт.</p><h3>Цвета</h3>'''
+if ONLY_A: panel=panel.replace('<button data-palette="b">Б: сине-зелёный / голубой</button>','')
 LABELS['accent_ink']='Текст на плашках'
 for key in ['green','light','paper','card','white','accent','accent_ink','ink']:
  panel+=f'<label class="design-color"><span>{LABELS[key]}</span><input type="color" data-group="palette" data-key="{key}" value="{base["palette"][key]}"></label>'
@@ -42,11 +44,11 @@ js='''
 (() => {
  const BASE=__BASE__, PALETTES=__PALETTES__, sectionDefaults=__SECTIONS__;
  let current=structuredClone(BASE), tones={...BASE.section_tones,conditions:BASE.conditions_tone,join:BASE.join_tone}, selected='a';
- const key='mindset-lab-design-review-v3';
+ const key='mindset-lab-design-review-a-v4';
  const query=new URLSearchParams(location.search);
  let restored=false;
  try { const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved&&!query.has('palette')){current=saved.settings;tones=saved.tones;selected=saved.palette;restored=true;} }catch{}
- if(query.get('palette')==='b'){current.palette=structuredClone(PALETTES.b);selected='b';}
+ if(query.get('palette')==='b' && document.querySelector('[data-palette="b"]')){current.palette=structuredClone(PALETTES.b);selected='b';}
  const style=document.createElement('style');style.id='review-live-settings';document.head.append(style);
  const panel=document.querySelector('#design-panel');
  function persist(){try{localStorage.setItem(key,JSON.stringify({settings:current,tones,palette:selected}));}catch{}}
@@ -110,7 +112,7 @@ blocks=[
  ('Условия участия','#conditions',880),
  ('Финальное приглашение','#join',510)
 ]
-for choice in ['a','b']:
+for choice in ([] if ONLY_A else ['a','b']):
  palette=palettes[choice]
  override='<style>:root {'+''.join('--'+k.replace('_','-')+':'+v+';' for k,v in palette.items())+'--clay:'+palette['accent']+';}</style>'
  cards=[]
@@ -120,7 +122,7 @@ for choice in ['a','b']:
   doc='<!doctype html><html><head><meta charset="utf-8">'+shared+override+'</head><body class="transition-landing">'+frag+'</body></html>'
   cards.append('<article><h2>'+title+'</h2><div class="frame-box" style="height:'+str(height*.45)+'px"><iframe title="'+title+'" style="height:'+str(height)+'px" srcdoc="'+html.escape(doc,quote=True)+'"></iframe></div></article>')
  colors=''.join('<span style="background:'+palette[k]+'"></span>' for k in ['green','light','paper','card','accent'])
- name='А. Тёмно-зелёный, тёплый светлый, охра' if choice=='a' else 'Б. Сине-зелёный, прохладный светлый, голубой'
+ name='А. Исходный зелёный и коралловый' if choice=='a' else 'Б. Сине-зелёный, прохладный светлый, голубой'
  board='<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+name+'</title><style>*{box-sizing:border-box}body{margin:0;background:#e2e5e2;color:#25382f;font-family:Arial,sans-serif}header{padding:24px 28px 20px;display:flex;justify-content:space-between;align-items:center}h1{font-size:25px;margin:0 0 8px}header p{margin:0;color:#5d6a62;font-size:14px}.swatches{display:flex;gap:6px}.swatches span{display:block;width:38px;height:38px;border-radius:50%;border:1px solid #0002}main{padding:0 24px 28px;display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}article{background:#fff;border:1px solid #c8d0ca;border-radius:5px;overflow:hidden}article>h2{font-size:12px;letter-spacing:.02em;margin:0;padding:10px 14px;border-bottom:1px solid #d8dfd9}.frame-box{position:relative;overflow:hidden}iframe{display:block;border:0;width:1360px;transform:scale(.45);transform-origin:0 0;pointer-events:none}</style></head><body><header><div><h1>'+name+'</h1><p>Одинаковая структура и тексты. Разные цвета и акценты.</p></div><div class="swatches">'+colors+'</div></header><main>'+''.join(cards)+'</main><script>document.querySelectorAll("iframe").forEach(f=>f.addEventListener("load",()=>{const d=f.contentDocument,h=d.querySelector("section").getBoundingClientRect().height+(d.querySelector("header")?.getBoundingClientRect().height||0)+4;f.style.height=h+"px";f.parentElement.style.height=h*.45+"px";}));</script></body></html>'
  (dest/('palette-'+choice+'.html')).write_text(board)
-print('Built standalone editable review and two palette boards')
+print('Built full Variant A review' if ONLY_A else 'Built standalone editable review and two palette boards')

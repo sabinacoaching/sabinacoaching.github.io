@@ -5,7 +5,7 @@
 .transition-landing .hero-inner{padding-block:var(--hero-padding-top) var(--hero-padding-bottom)}
 .transition-landing .hero h1{max-width:var(--hero-title-width);font-size:var(--hero-title-size);line-height:1.08;letter-spacing:-.04em;margin-bottom:26px}
 .transition-landing .hero-description{max-width:var(--hero-text-width)!important;font-size:var(--hero-text-size);line-height:1.6}
-.transition-landing .hero .eyebrow{color:var(--accent);margin-bottom:22px}
+.transition-landing .hero .eyebrow{color:#e8af98;margin-bottom:22px}
 .transition-landing .hero-actions{margin-top:30px}
 .transition-landing .hero-facts{margin-top:34px;padding-top:21px}
 .transition-landing .hero:after{right:-240px;top:70px;border-color:#ffffff10}
@@ -14,7 +14,7 @@
 .transition-landing .paired-panel h2{white-space:pre-line}
 .transition-landing .section--comparison .paired-panels{grid-template-columns:minmax(0,1.106fr) minmax(0,1fr);gap:var(--comparison-gap)}
 .transition-landing .section--comparison .paired-panel h2{font-size:var(--comparison-title-size);min-height:2.34em;margin-bottom:30px;line-height:1.17}
-.transition-landing .comparison-question{left:calc(50% + 13px);color:var(--accent)}
+.transition-landing .comparison-question{left:calc(50% + 13px);color:#e8af98}
 .transition-landing .situation-card{background:var(--card);border-radius:var(--card-radius)}
 #recognition .situation-card,#recognition .situation-card .prose,#barriers .situation-card,#barriers .situation-card .prose,#program .situation-card,#program .situation-card .prose,#outcomes .section-body li{color:var(--ink)}
 .transition-landing .barriers-afterword{max-width:none;margin-top:36px}
@@ -47,7 +47,7 @@
 .transition-landing .join.tone-paper{background:var(--paper)}
 .transition-landing .join.tone-green{background:var(--green);color:var(--light)}
 .transition-landing .join .prose{color:inherit}
-.transition-landing .join .button{background:var(--green);color:var(--light)}
+.transition-landing .join .button{background:var(--accent);color:var(--accent-ink)}
 .transition-landing .join.tone-green .button{background:var(--accent);color:var(--accent-ink)}
 .transition-landing .footer{background:var(--deep);color:var(--light)}
 @media(max-width:1100px){.transition-landing .hero h1{max-width:720px;font-size:min(var(--hero-title-size),54px)}.transition-landing .section--comparison .paired-panels{gap:100px}.transition-landing .section--comparison .paired-panel h2{font-size:29px;min-height:2.34em}}

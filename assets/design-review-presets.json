@@ -1,15 +1,15 @@
 {
   "a": {
-    "green": "#173C31",
-    "deep": "#102D25",
-    "ink": "#20372C",
-    "light": "#FBF9F3",
-    "paper": "#F0EDE3",
-    "card": "#F5E3D8",
+    "green": "#17372d",
+    "deep": "#102920",
+    "ink": "#1b2a23",
+    "light": "#faf8f2",
+    "paper": "#f0ebe1",
+    "card": "#f0ebe1",
     "white": "#FFFFFF",
-    "accent": "#DABD63",
-    "accent_ink": "#18392E",
-    "muted": "#5B685E"
+    "accent": "#b54d35",
+    "accent_ink": "#FFFFFF",
+    "muted": "#58645c"
   },
   "b": {
     "green": "#20434B",
