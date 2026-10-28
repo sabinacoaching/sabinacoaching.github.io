@@ -1,0 +1,7 @@
+<ol class="outcomes-list">
+  {% for item in p.outcomes.items %}
+  <li><div class="outcome-content"><p><strong>{{ item.title | escape }}</strong></p><div class="outcome-body">{{ item.body }}</div></div></li>
+  {% endfor %}
+</ol>
+{{ p.outcomes.bonus }}
+<div class="outcomes-summary">{{ p.outcomes.summary }}{{ p.outcomes.limitation }}</div>

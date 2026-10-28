@@ -82,6 +82,50 @@ content:
         format: html
         media: false
         switcher: false
+  - name: outcomes
+    label: 'Результаты программы: шесть карточек'
+    type: object
+    fields:
+    - name: items
+      label: Нумерованные результаты
+      type: object
+      list:
+        collapsible:
+          collapsed: true
+          summary: '{title}'
+      fields:
+      - name: title
+        label: Заголовок результата
+        type: text
+        description: Номер и оформление карточки появятся автоматически.
+      - name: body
+        label: Описание результата
+        type: rich-text
+        options:
+          format: html
+          media: false
+          switcher: false
+    - name: bonus
+      label: Бонус групповой работы
+      type: rich-text
+      options:
+        format: html
+        media: false
+        switcher: false
+    - name: summary
+      label: Результат 12 недель
+      type: rich-text
+      options:
+        format: html
+        media: false
+        switcher: false
+    - name: limitation
+      label: Пояснение о длительности перехода
+      type: rich-text
+      options:
+        format: html
+        media: false
+        switcher: false
   - name: format_stats
     label: Общие параметры под форматом
     type: object
@@ -145,6 +189,7 @@ content:
       description: Перенос строки здесь задаёт перенос в заголовке на широком экране.
     - name: body
       label: Текст раздела
+      description: 'Для блока результатов используйте поле «Результаты программы: шесть карточек» выше.'
       type: rich-text
       options:
         format: html
