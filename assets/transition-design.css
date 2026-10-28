@@ -82,6 +82,13 @@
   .transition-landing .about-portrait{margin-top:26px}
 }
 
+/* Return to the beginning from any section of this landing page. */
+.transition-landing .back-to-top{position:fixed;right:24px;bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:20;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:10px 16px;border:1px solid var(--white-line);border-radius:999px;background:var(--green);color:var(--white);font:700 13px/1 Arial,Helvetica,sans-serif;text-decoration:none;box-shadow:0 4px 14px #10292029}
+.transition-landing .back-to-top>span:first-child{font-size:21px;line-height:1}
+.transition-landing .back-to-top:hover{background:var(--deep)}
+.transition-landing .back-to-top:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
+@media(max-width:640px){.transition-landing .back-to-top{right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:46px;height:46px;padding:0}.transition-landing .back-to-top-label{display:none}}
+
 /* Desktop changes from the supplied technical brief, 28 October 2026. */
 @media(min-width:951px){
   #barriers h2,#outcomes h2,#program h2,#conditions h2{font-size:43px;line-height:1.17;letter-spacing:-.027em}
