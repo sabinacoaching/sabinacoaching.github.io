@@ -140,3 +140,6 @@
 #about .about-story-body{max-width:900px;margin:0;padding:28px 0 0;border-top:1px solid var(--line)}
 #about .about-story-body h3{font-size:30px;margin:0 0 24px}
 @media(max-width:640px){#about .about-story-body{padding-top:22px}#about .about-story-body h3{font-size:27px}}
+
+/* A cleared CMS introduction must not render as an empty callout. */
+#program .section-body:empty,#program .section-body>p:empty{display:none}
