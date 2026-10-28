@@ -68,6 +68,20 @@ content:
     - name: about_alt
       label: Описание фото в блоке «Обо мне»
       type: string
+  - name: about_story
+    label: 'Обо мне: история под плюсиком'
+    type: object
+    fields:
+    - name: title
+      label: Подпись раскрывающейся истории
+      type: string
+    - name: body
+      label: Полная история
+      type: rich-text
+      options:
+        format: html
+        media: false
+        switcher: false
   - name: format_stats
     label: Общие параметры под форматом
     type: object

@@ -127,3 +127,16 @@
   #join{border-top:3px solid var(--green);padding-block:72px 70px}
   #join h2{font-size:42px}
 }
+
+/* The short biography stays visible; the full story opens below the portrait. */
+#about .section-inner{row-gap:28px}
+#about .section-heading{position:static;top:auto}
+#about .about-story{grid-column:1/-1;min-width:0}
+#about .about-story-toggle{display:flex;width:min(100%,320px);box-sizing:border-box;justify-content:space-between;gap:20px;margin:24px 0 0;padding:18px 0;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:transparent;text-align:left;align-items:center;color:var(--green);font:700 16px/1.45 Arial,Helvetica,sans-serif;cursor:pointer}
+#about .about-story-toggle[hidden],#about .about-story[hidden]{display:none}
+#about .about-story-icon{display:inline-flex;flex:0 0 30px;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--line);border-radius:50%;color:var(--green);font:400 25px/1 Arial,Helvetica,sans-serif}
+#about .about-story-toggle[aria-expanded="true"] .about-story-icon{transform:rotate(45deg)}
+#about .about-story-toggle:hover .about-story-icon{background:var(--paper);border-color:var(--green)}
+#about .about-story-body{max-width:900px;margin:0;padding:28px 0 0;border-top:1px solid var(--line)}
+#about .about-story-body h3{font-size:30px;margin:0 0 24px}
+@media(max-width:640px){#about .about-story-body{padding-top:22px}#about .about-story-body h3{font-size:27px}}

@@ -1,5 +1,16 @@
 /* Native details work individually even without JavaScript. */
 (() => {
+  const storyButton = document.querySelector('.about-story-toggle');
+  const storyContent = document.getElementById('about-story-content');
+  if (storyButton && storyContent) {
+    storyContent.hidden = true;
+    storyButton.hidden = false;
+    storyButton.addEventListener('click', () => {
+      const expanded = storyButton.getAttribute('aria-expanded') === 'true';
+      storyButton.setAttribute('aria-expanded', String(!expanded));
+      storyContent.hidden = expanded;
+    });
+  }
   for (const block of document.querySelectorAll("[data-situations]")) {
     const cards = [...block.querySelectorAll(".situation-details")];
     for (const button of block.querySelectorAll("[data-situations-action]")) {
