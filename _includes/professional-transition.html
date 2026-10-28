@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#17372d">
   <link rel="stylesheet" href="{{ '/assets/mindset-lab.css' | relative_url }}?v=layout-20261027">
   {% include transition-design.html %}
-  <link rel="stylesheet" href="{{ "/assets/transition-design.css" | relative_url }}?v=design-live-20261027">
+  <link rel="stylesheet" href="{{ "/assets/transition-design.css" | relative_url }}?v=approved-layout-20261028">
 </head>
 <body class="transition-landing">
   <a class="skip-link" href="#main">Перейти к тексту</a>
@@ -42,6 +42,7 @@
         <ul class="hero-facts" aria-label="Кратко о формате">
           <li>{{ p.hero.duration | escape }}</li><li>{{ p.hero.meetings | escape }}</li><li>{{ p.hero.group | escape }}</li>
         </ul>
+        {% if p.portraits.hero %}<figure class="hero-portrait"><img src="{{ p.portraits.hero | relative_url }}" alt="{{ p.portraits.hero_alt | escape }}" width="1365" height="2048" fetchpriority="high" decoding="async"></figure>{% endif %}
       </div>
     </section>
     {% for section in p.sections %}
@@ -53,7 +54,9 @@
       <div class="container section-inner">
         {% if section.paired_layout %}{% include paired-panels.html %}{% endif %}
         {% unless section.paired_layout %}
-        <div class="section-heading"><h2 id="title-{{ section_id | escape }}">{{ section.title | escape }}</h2></div>
+        <div class="section-heading"><h2 id="title-{{ section_id | escape }}">{{ section.title | escape }}</h2>
+          {% if section.id == 'about' %}{% if p.portraits.about %}<figure class="about-portrait"><img src="{{ p.portraits.about | relative_url }}" alt="{{ p.portraits.about_alt | escape }}" width="1365" height="2048" loading="lazy" decoding="async"></figure>{% endif %}{% endif %}
+        </div>
         <div class="prose section-body">{{ section.body }}</div>
         {% if section.has_situations %}{% include situations.html %}{% endif %}
         {% if section.has_barriers %}{% include barriers.html %}{% endif %}
@@ -84,5 +87,3 @@
   <script src="{{ '/assets/situations.js' | relative_url }}?v=layout-20261027" defer></script>
 </body>
 </html>
-
-

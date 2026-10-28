@@ -28,7 +28,7 @@ def check_fields(data, fields, trail):
             assert field['options']['min']<=value<=field['options']['max'],here
         elif field['type']=='select':
             assert value in [v['name'] if isinstance(v,dict) else v for v in field['options']['values']],here
-        elif field['type'] in ('string','text'): assert isinstance(value,str),here
+        elif field['type'] in ('string','text','image'): assert isinstance(value,str),here
         else: raise AssertionError('Unexpected field '+here)
 
 for entry in config['content']:

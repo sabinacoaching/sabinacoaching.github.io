@@ -11,7 +11,8 @@
     "accent_ink": "#FFFFFF",
     "muted": "#58645c",
     "promo": "#e4b49d",
-    "promo_ink": "#1b2a23"
+    "promo_ink": "#1b2a23",
+    "peach": "#FFCBB9"
   },
   "layout": {
     "hero_title_size": 58,
@@ -34,7 +35,7 @@
     "recognition": "light",
     "trajectory": "green",
     "barriers": "light",
-    "outcomes": "paper",
+    "outcomes": "peach",
     "format": "green",
     "program": "light",
     "about": "light",

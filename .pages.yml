@@ -1,3 +1,13 @@
+media:
+- name: portraits
+  label: Фотографии
+  input: assets/images
+  output: /assets/images
+  extensions:
+  - jpg
+  - jpeg
+  - png
+  - webp
 content:
 - name: professional_transition
   label: Профессиональный переход
@@ -37,6 +47,42 @@ content:
       type: string
     - name: secondary_label
       label: Ссылка на программу
+      type: string
+  - name: portraits
+    label: Фотографии
+    type: object
+    fields:
+    - name: hero
+      label: Фото на первом экране
+      type: image
+      options:
+        media: portraits
+    - name: hero_alt
+      label: Описание фото первого экрана
+      type: string
+    - name: about
+      label: Фото в блоке «Обо мне»
+      type: image
+      options:
+        media: portraits
+    - name: about_alt
+      label: Описание фото в блоке «Обо мне»
+      type: string
+  - name: format_stats
+    label: Общие параметры под форматом
+    type: object
+    fields:
+    - name: duration
+      label: Продолжительность
+      type: string
+    - name: meetings
+      label: Встречи
+      type: string
+    - name: group
+      label: Участники
+      type: string
+    - name: button
+      label: Текст кнопки
       type: string
   - name: sections
     label: Разделы лендинга
@@ -344,6 +390,8 @@ content:
           label: Насыщенный персиковый
         - name: '#e8c3b1'
           label: Светлый персиковый
+        - name: '#FFCBB9'
+          label: Персиковый из утверждённого макета
       description: Выберите цвет из палитры сайта.
     - name: deep
       label: Самый тёмный фон
@@ -370,6 +418,8 @@ content:
           label: Насыщенный персиковый
         - name: '#e8c3b1'
           label: Светлый персиковый
+        - name: '#FFCBB9'
+          label: Персиковый из утверждённого макета
       description: Выберите цвет из палитры сайта.
     - name: ink
       label: Основной текст
@@ -396,6 +446,8 @@ content:
           label: Насыщенный персиковый
         - name: '#e8c3b1'
           label: Светлый персиковый
+        - name: '#FFCBB9'
+          label: Персиковый из утверждённого макета
       description: Выберите цвет из палитры сайта.
     - name: light
       label: Основной светлый фон
@@ -422,6 +474,8 @@ content:
           label: Насыщенный персиковый
         - name: '#e8c3b1'
           label: Светлый персиковый
+        - name: '#FFCBB9'
+          label: Персиковый из утверждённого макета
       description: Выберите цвет из палитры сайта.
     - name: paper
       label: Второй светлый фон
@@ -448,6 +502,8 @@ content:
           label: Насыщенный персиковый
         - name: '#e8c3b1'
           label: Светлый персиковый
+        - name: '#FFCBB9'
+          label: Персиковый из утверждённого макета
       description: Выберите цвет из палитры сайта.
     - name: card
       label: Карточки ситуаций и причин
@@ -474,6 +530,8 @@ content:
           label: Насыщенный персиковый
         - name: '#e8c3b1'
           label: Светлый персиковый
+        - name: '#FFCBB9'
+          label: Персиковый из утверждённого макета
       description: Выберите цвет из палитры сайта.
     - name: white
       label: Карточки результатов и этапов
@@ -500,6 +558,8 @@ content:
           label: Насыщенный персиковый
         - name: '#e8c3b1'
           label: Светлый персиковый
+        - name: '#FFCBB9'
+          label: Персиковый из утверждённого макета
       description: Выберите цвет из палитры сайта.
     - name: accent
       label: 'Кнопки: коралловый акцент'
@@ -526,6 +586,8 @@ content:
           label: Насыщенный персиковый
         - name: '#e8c3b1'
           label: Светлый персиковый
+        - name: '#FFCBB9'
+          label: Персиковый из утверждённого макета
       description: Выберите цвет из палитры сайта.
     - name: accent_ink
       label: Текст на кнопках
@@ -552,6 +614,8 @@ content:
           label: Насыщенный персиковый
         - name: '#e8c3b1'
           label: Светлый персиковый
+        - name: '#FFCBB9'
+          label: Персиковый из утверждённого макета
       description: Выберите цвет из палитры сайта.
     - name: muted
       label: Второстепенный текст
@@ -578,6 +642,8 @@ content:
           label: Насыщенный персиковый
         - name: '#e8c3b1'
           label: Светлый персиковый
+        - name: '#FFCBB9'
+          label: Персиковый из утверждённого макета
       description: Выберите цвет из палитры сайта.
     - name: promo
       label: 'Плашки: фон'
@@ -604,6 +670,8 @@ content:
           label: Насыщенный персиковый
         - name: '#e8c3b1'
           label: Светлый персиковый
+        - name: '#FFCBB9'
+          label: Персиковый из утверждённого макета
       description: Выберите цвет из палитры сайта.
     - name: promo_ink
       label: 'Плашки: цвет текста'
@@ -630,7 +698,36 @@ content:
           label: Насыщенный персиковый
         - name: '#e8c3b1'
           label: Светлый персиковый
+        - name: '#FFCBB9'
+          label: Персиковый из утверждённого макета
       description: Выберите цвет из палитры сайта.
+    - name: peach
+      label: Точечные персиковые акценты макета
+      type: select
+      options:
+        values:
+        - name: '#17372d'
+          label: Исходный зелёный
+        - name: '#102920'
+          label: Тёмно-зелёный подвала
+        - name: '#1b2a23'
+          label: Тёмный текст
+        - name: '#faf8f2'
+          label: Светлый фон
+        - name: '#f0ebe1'
+          label: Бежевый
+        - name: '#FFFFFF'
+          label: Белый
+        - name: '#b54d35'
+          label: Коралловый
+        - name: '#58645c'
+          label: Приглушённый текст
+        - name: '#e4b49d'
+          label: Насыщенный персиковый
+        - name: '#e8c3b1'
+          label: Светлый персиковый
+        - name: '#FFCBB9'
+          label: Персиковый из утверждённого макета
   - name: layout
     label: Размеры и расстояния
     type: object
@@ -751,7 +848,7 @@ content:
         - name: paper
           label: Бежевый фон
     - name: outcomes
-      label: Результаты программы
+      label: 'Результаты программы: фон на большом экране'
       type: select
       options:
         values:
@@ -761,6 +858,8 @@ content:
           label: Светлый фон
         - name: paper
           label: Бежевый фон
+        - name: peach
+          label: Персиковый фон макета
     - name: format
       label: Формат и участники
       type: select

@@ -4,10 +4,16 @@
   {% unless panel.hidden %}
   <article class="paired-panel" {% unless panel.id == section.id %}id="{{ panel.id | escape }}"{% endunless %}>
     <h2 id="title-{{ panel.id | escape }}">{{ panel.title | escape }}</h2>
-    <div class="prose">{{ panel.body }}</div>
+    <div class="prose">{% if panel.id == 'format' %}<p class="format-original-stats"><strong>{{ p.format_stats.duration | escape }}, {{ p.format_stats.meetings | escape }}, {{ p.format_stats.group | escape }}.</strong></p>{% endif %}{{ panel.body }}</div>
   </article>
   {% if section.show_question %}{% if panel.id == section.id %}<span class="comparison-question" aria-hidden="true">?</span>{% endif %}{% endif %}
   {% endunless %}
   {% endif %}
   {% endfor %}
 </div>
+{% if section.id == 'format' %}
+<div class="format-shared">
+  <ul class="format-stats" aria-label="Параметры практикума"><li>{{ p.format_stats.duration | escape }}</li><li>{{ p.format_stats.meetings | escape }}</li><li>{{ p.format_stats.group | escape }}</li></ul>
+  <a class="button" href="{{ p.contact.url | escape }}" target="_blank" rel="noopener noreferrer">{{ p.format_stats.button | escape }}</a>
+</div>
+{% endif %}
