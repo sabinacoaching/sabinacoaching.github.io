@@ -96,10 +96,134 @@ async function open(p){for(const [key] of extras)controls[key].value=p[key]??'';
 for(const f of p.floorplans){const u=await photo(f);if(!u)continue;if(/\.pdf(?:\?|$)/i.test(f.path||f.url||'')){const a=node('a','','Open floor plan ↗');a.href=u;a.target='_blank';a.rel='noopener noreferrer';floorContents.append(a)}else{const image=node('img');image.src=u;image.alt='Floor plan';floorContents.append(image)}}}
 function edited(){const o={};for(const [key] of extras)o[key]=cast(key,controls[key].value);return o}
 async function postcodeLocate(p){const a=p.address||p.title||'',full=a.match(/\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i),out=a.match(/\b([A-Z]{1,2}\d[A-Z\d]?)\b/i);if(!full&&!out)return false;const url=full?'https://api.postcodes.io/postcodes/'+encodeURIComponent(full[1].replace(/\s/g,'')):'https://api.postcodes.io/outcodes/'+encodeURIComponent(out[1]);const r=await fetch(url);if(!r.ok)return false;const j=await r.json(),v=j.result;if(!v||!Number.isFinite(v.latitude)||!Number.isFinite(v.longitude))return false;const saveResult=await sb.from('properties').update({latitude:v.latitude,longitude:v.longitude}).eq('id',p.id);if(saveResult.error)throw saveResult.error;p.latitude=v.latitude;p.longitude=v.longitude;return true}
-async function showMap(){if(!L){const mod=await import('https://esm.sh/leaflet@1.9.4');L=mod.default||mod}if(!map){map=L.map(mapDiv).setView([51.466,-.31],12);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);markers=L.layerGroup().addTo(map)}setTimeout(()=>map.invalidateSize(),200);redraw()}
-function redraw(){if(!map||!markers)return;markers.clearLayers();missingDiv.replaceChildren();const groups=new Map(),miss=[],bounds=[];for(const p of rows){if(p.latitude==null||p.longitude==null||!Number.isFinite(Number(p.latitude))||!Number.isFinite(Number(p.longitude))){miss.push(p);continue}const point=[Number(p.latitude),Number(p.longitude)];if(point[0]<49||point[0]>61||point[1]<-9||point[1]>3){miss.push(p);continue}const k=point.join(',');if(!groups.has(k))groups.set(k,[]);groups.get(k).push(p)}
-for(const g of groups.values()){const coord=[Number(g[0].latitude),Number(g[0].longitude)];bounds.push(coord);const popup=node('div');popup.append(node('strong','',g.length>1?g.length+' houses at approximate postcode location':clean(g[0].address)));for(const p of g){const b=node('button','',clean(p.address)+' · '+money(p.price));b.style.display='block';b.style.marginTop='5px';b.onclick=()=>openHouse(p);popup.append(b)}L.marker(coord).addTo(markers).bindPopup(popup)}
-if(bounds.length===1)map.setView(bounds[0],14);else if(bounds.length>1)map.fitBounds(bounds,{padding:[36,36],maxZoom:14});mapMsg.textContent=groups.size+' map positions for '+rows.length+' houses. Source listing pins may be approximate.';
-if(miss.length){missingDiv.append(node('span','hh-help',miss.length+' without map coordinates: '));for(const p of miss){const b=node('button','',clean(p.address)+' · Locate');b.onclick=async()=>{b.disabled=true;try{if(await postcodeLocate(p)){flash('Postcode located');redraw()}else{b.disabled=false;b.textContent='Postcode unavailable'}}catch(e){b.disabled=false;flash(e.message,true)}};missingDiv.append(b)}}}
+
+const transitInfo=node('p','hh-transport-summary','Rail, Tube, tram and bus stops appear as map symbols (zoom in for bus stops).');
+const googleHelp=node('a','hh-google-link','Open Google Maps ↗');googleHelp.href='https://www.google.com/maps/@51.46,-0.31,12z';googleHelp.target='_blank';googleHelp.rel='noopener noreferrer';
+const mapTools=node('div','hh-map-tools');mapTools.append(transitInfo,googleHelp);mapPanel.insertBefore(mapTools,mapDiv);
+let transportLayer=null,transportTimeout=null,transitVersion=0,overpassCache=new Map();
+const mapsFor=(p)=>'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(Number(p.latitude)+','+Number(p.longitude));
+async function showMap(){
+ if(!L){const mod=await import('https://esm.sh/leaflet@1.9.4');L=mod.default||mod}
+ if(!map){
+  map=L.map(mapDiv,{zoomControl:true,preferCanvas:true}).setView([51.466,-.31],12);
+  const voyager=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors © CARTO'});
+  const street=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'});
+  voyager.addTo(map);
+  L.control.layers({'Detailed map':voyager,'Street map':street},null,{collapsed:true,position:'topright'}).addTo(map);
+  transportLayer=L.layerGroup().addTo(map);
+  markers=L.layerGroup().addTo(map);
+  map.on('moveend zoomend',scheduleTransport);
+ }
+ setTimeout(()=>{map.invalidateSize();scheduleTransport()},180);
+ redraw();
+}
+function scheduleTransport(){
+ if(!map||!transportLayer)return;
+ if(transportTimeout)clearTimeout(transportTimeout);
+ transportTimeout=setTimeout(()=>loadTransport().catch(e=>{transitInfo.textContent='Transport overlay unavailable. Google Maps links work for each house.';console.warn('Transport map',e)}),700);
+}
+async function loadTransport(){
+ if(!map||!transportLayer)return;
+ const zoom=map.getZoom(),b=map.getBounds();
+ const sw=b.getSouthWest(),ne=b.getNorthEast();
+ if(sw.lat<49||ne.lat>61||sw.lng< -9||ne.lng>3)return;
+ const showBus=zoom>=15;
+ const coords=[sw.lat,sw.lng,ne.lat,ne.lng].map(n=>n.toFixed(5)).join(',');
+ const key=[zoom>=15?'bus':'rail',...[sw.lat,sw.lng,ne.lat,ne.lng].map(n=>n.toFixed(2))].join(':');
+ const current=++transitVersion;
+ let features=overpassCache.get(key);
+ if(!features){
+  transitInfo.textContent='Loading railway stations and '+(showBus?'bus stops…':'Tube stations…');
+  const query='[out:json][timeout:18];('+
+   'node["railway"~"^(station|halt|tram_stop)$"]('+coords+');'+
+   'way["railway"~"^(station|halt)$"]('+coords+');'+
+   'node["station"="subway"]('+coords+');'+
+   (showBus?'node["highway"="bus_stop"]('+coords+');':'')+
+   ');out center tags 500;';
+  let error=null;
+  for(const endpoint of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']){
+   try{
+    const response=await fetch(endpoint+'?data='+encodeURIComponent(query),{headers:{Accept:'application/json'}});
+    if(!response.ok)throw Error('HTTP '+response.status);
+    const data=await response.json();
+    if(!Array.isArray(data.elements))throw Error('Invalid transport data');
+    features=data.elements;
+    overpassCache.set(key,features);
+    if(overpassCache.size>12)overpassCache.delete(overpassCache.keys().next().value);
+    break;
+   }catch(e){error=e}
+  }
+  if(!features)throw error||Error('Transport map not available');
+ }
+ if(current!==transitVersion)return;
+ transportLayer.clearLayers();
+ const seen=new Set();let rails=0,buses=0;
+ for(const t of features){
+  const lat=Number(t.lat??t.center?.lat),lon=Number(t.lon??t.center?.lon),tags=t.tags||{};
+  if(!Number.isFinite(lat)||!Number.isFinite(lon))continue;
+  if(!b.contains([lat,lon]))continue;
+  const name=String(tags.name||'').trim();
+  const isBus=tags.highway==='bus_stop';
+  const isTram=tags.railway==='tram_stop';
+  const isTube=tags.station==='subway'||tags.network?.toLowerCase().includes('underground')||tags.name?.toLowerCase().includes('underground');
+  const signature=[isBus?'bus':'rail',name.toLowerCase(),lat.toFixed(3),lon.toFixed(3)].join('|');
+  if(seen.has(signature))continue;
+  seen.add(signature);
+  if(isBus)buses++;else rails++;
+  const iconContent=isBus?'B':isTram?'T':isTube?'U':'R';
+  const iconClass=isBus?'hh-transit-bus':isTube?'hh-transit-tube':isTram?'hh-transit-tram':'hh-transit-rail';
+  const icon=L.divIcon({className:'hh-transit-icon '+iconClass,html:'<span>'+iconContent+'</span>',iconSize:[22,22],iconAnchor:[11,11]});
+  const marker=L.marker([lat,lon],{icon,interactive:true,keyboard:false});
+  const title=name|| (isBus?'Bus stop':isTram?'Tram stop':isTube?'Tube station':'Rail station');
+  marker.bindTooltip(title,{direction:'top'});
+  const box=node('div'),heading=node('strong','',title),type=node('div','hh-map-kind',isBus?'Bus stop':isTram?'Tram stop':isTube?'Underground':'Rail station');
+  box.append(heading,type);
+  if(tags.ref)box.append(node('div','',tags.ref));
+  marker.bindPopup(box);marker.addTo(transportLayer);
+ }
+ transitInfo.textContent=rails+' rail / Tube / tram stops'+(showBus?' · '+buses+' bus stops':' · zoom in to see bus stops');
+}
+function redraw(){
+ if(!map||!markers)return;
+ markers.clearLayers();missingDiv.replaceChildren();
+ const groups=new Map(),miss=[],bounds=[];
+ for(const p of rows){
+  if(p.latitude==null||p.longitude==null||!Number.isFinite(Number(p.latitude))||!Number.isFinite(Number(p.longitude))){miss.push(p);continue}
+  const point=[Number(p.latitude),Number(p.longitude)];
+  if(point[0]<49||point[0]>61||point[1]<-9||point[1]>3){miss.push(p);continue}
+  const k=point.join(',');
+  if(!groups.has(k))groups.set(k,[]);
+  groups.get(k).push(p);
+ }
+ let placed=0,shared=0;
+ for(const g of groups.values()){
+  placed+=g.length;if(g.length>1)shared+=g.length;
+  const coord=[Number(g[0].latitude),Number(g[0].longitude)];
+  bounds.push(coord);
+  const popup=node('div','hh-property-popup');
+  popup.append(node('strong','',g.length>1?g.length+' houses at this location':clean(g[0].address)));
+  for(const p of g){
+   const line=node('div','hh-map-house-line');
+   const b=node('button','',clean(p.address)+' · '+money(p.price));b.onclick=()=>openHouse(p);
+   const gm=node('a','hh-map-gm','Google Maps ↗');gm.href=mapsFor(p);gm.target='_blank';gm.rel='noopener noreferrer';
+   line.append(b,gm);popup.append(line);
+  }
+  const icon=L.divIcon({className:'hh-property-pin-wrapper',html:'<div class="hh-property-pin">'+(g.length>1?String(g.length):'⌂')+'</div>',iconSize:[35,39],iconAnchor:[17,36]});
+  L.marker(coord,{icon,zIndexOffset:1000}).addTo(markers).bindPopup(popup,{maxWidth:300});
+ }
+ if(bounds.length===1)map.setView(bounds[0],14);
+ else if(bounds.length>1)map.fitBounds(bounds,{padding:[35,35],maxZoom:14});
+ mapMsg.textContent=placed+' homes on map'+(shared?' · '+shared+' homes share a pin':'')+' · '+groups.size+' locations. Pins from listing sites may be approximate.';
+ if(miss.length){
+  missingDiv.append(node('span','hh-help',miss.length+' without coordinates: '));
+  for(const p of miss){
+   const b=node('button','',clean(p.address)+' · Locate');
+   b.onclick=async()=>{b.disabled=true;try{if(await postcodeLocate(p)){flash('Postcode located');redraw()}else{b.disabled=false;b.textContent='Postcode unavailable'}}catch(e){b.disabled=false;flash(e.message,true)}};
+   missingDiv.append(b);
+  }
+ }
+ scheduleTransport();
+}
+
 return {render,open,edited};
 }
