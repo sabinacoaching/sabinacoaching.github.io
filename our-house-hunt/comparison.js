@@ -20,39 +20,18 @@ function editor(p,key,type='text'){let x=node(type==='textarea'?'textarea':type=
 const cell=value=>{const t=node('td');if(value instanceof Node)t.append(value);else t.textContent=value;return t};
 const val=v=>v==null||v===''?'—':String(v);
 
-const imageHashes=new Map();
-async function imageFingerprint(url){
- if(imageHashes.has(url))return imageHashes.get(url);
- const task=(async()=>{
-  const image=new Image();image.crossOrigin='anonymous';image.decoding='async';image.src=url;await image.decode();
-  if(image.naturalWidth<100||image.naturalHeight<75)return {skip:true};
-  let hash=null;
-  try{
-   const canvas=document.createElement('canvas');canvas.width=9;canvas.height=8;
-   const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(image,0,0,9,8);
-   const rgba=ctx.getImageData(0,0,9,8).data;
-   const pixels=[];for(let i=0;i<rgba.length;i+=4)pixels.push(rgba[i]*.3+rgba[i+1]*.59+rgba[i+2]*.11);
-   hash=[];for(let y=0;y<8;y++)for(let x=0;x<8;x++)hash.push(pixels[y*9+x]>pixels[y*9+x+1]?1:0);
-  }catch(e){/* storage CORS unavailable: retain image with no fingerprint */}
-  return {hash};
- })();
- imageHashes.set(url,task);return task;
-}
-const dist=(a,b)=>a.reduce((n,v,i)=>n+(v!==b[i]?1:0),0);
 async function distinctPhotos(p,container){
- const selected=[];
- for(const src of (p.images||[])){
-  if(selected.length===4)break;
-  const url=await photo(src);if(!url)continue;
-  let candidate;
-  try{candidate=await imageFingerprint(url)}catch{candidate={hash:null}}
-  if(candidate.skip)continue;
-  if(candidate.hash&&selected.some(s=>s.hash&&dist(candidate.hash,s.hash)<=7))continue;
-  selected.push({url,hash:candidate.hash});
-  const img=node('img','hh-photo'+(selected.length===1?' hh-photo-main':''));
-  img.alt='Property photograph '+selected.length;img.loading='lazy';img.src=url;img.onclick=()=>openHouse(p);container.append(img);
- }
- if(!selected.length&&container.isConnected)container.append(node('div','hh-photo-unavailable','No photos'));
+  const photos=(p.images||[]).slice(0,4);
+  if(!photos.length){container.append(node('div','hh-photo-unavailable','No photos'));return}
+  for(let i=0;i<photos.length;i++){
+    const img=node('img','hh-photo'+(i===0?' hh-photo-main':''));
+    img.alt='Property photograph '+(i+1);
+    img.loading='lazy';
+    img.onclick=()=>openHouse(p);
+    container.append(img);
+    try{const url=await photo(photos[i]);if(url)img.src=url;else img.classList.add('hh-photo-missing')}
+    catch(e){img.classList.add('hh-photo-missing')}
+  }
 }
 function labelledEditor(p,label,key,type='text'){
  const box=node('label','hh-field');
