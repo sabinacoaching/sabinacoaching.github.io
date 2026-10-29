@@ -52,3 +52,20 @@
 .hh-help{font-size:12px;color:#718177}
 .hh-map .leaflet-popup-content button{padding:7px 9px;font-size:12px}
 @media(max-width:640px){.hh-table-shell{max-height:72vh}.hh-table th:first-child,.hh-table td:first-child{min-width:240px;max-width:255px;width:245px}.hh-photo-grid{grid-template-rows:125px 55px}.hh-address{font-size:13px}.hh-auxgrid label.wide{grid-column:span 1}.hh-notice{flex-basis:100%}}
+
+/* Editable cells and linked floor plans */
+.hh-table td .hh-field{display:flex;flex-direction:column;gap:3px;min-width:0}
+.hh-table td .hh-mini{color:#70847a;font-size:10px;line-height:1.2}
+.hh-table td .hh-field input,.hh-table td .hh-field textarea{min-width:0;width:100%;border:1px solid transparent;background:transparent;border-radius:5px;padding:5px;font-size:13px}
+.hh-table td .hh-field:hover input,.hh-table td .hh-field:hover textarea,.hh-table td .hh-field input:focus,.hh-table td .hh-field textarea:focus{border-color:#a8c4b3;background:#fbfdfb}
+.hh-table td input[type=number]{width:85px;min-width:70px;max-width:110px;font-size:13px;border:1px solid transparent;background:transparent}
+.hh-table td input[type=number]:hover,.hh-table td input[type=number]:focus{border-color:#a8c4b3;background:#fbfdfb}
+.hh-table td:nth-child(6) input[type=number]{width:100px}
+.hh-table td:nth-child(7) textarea{min-width:160px;min-height:85px}
+.hh-table td:nth-child(8) input[type=text]{min-width:148px}
+.hh-table td:nth-child(9) textarea,.hh-table td:nth-child(10) textarea{min-width:155px}
+.hh-address[contenteditable]{cursor:text;min-height:20px;outline-offset:3px}
+.hh-address[contenteditable]:focus{outline:1px solid #a4bca8}
+.hh-house .hh-plan-link{display:block;background:transparent;border:0;color:#315e50;font-size:11px;font-weight:650;padding:1px 0;align-self:start}
+.hh-house .hh-plan-link:hover{text-decoration:underline}
+.hh-photo-grid img.hh-photo-main{object-position:center 35%}
