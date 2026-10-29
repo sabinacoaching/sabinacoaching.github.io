@@ -19,6 +19,47 @@ async function save(p,key,value,input){const val=cast(key,value);if(nums.has(key
 function editor(p,key,type='text'){let x=node(type==='textarea'?'textarea':type==='select'?'select':'input');if(type==='select'){for(const [v,label] of Object.entries(statuses)){const opt=node('option','',label);opt.value=v;x.append(opt)}x.value=p[key]||'saved'}else{if(type==='number'){x.type='number';x.step='any';x.min='0'}if(type==='textarea')x.rows=3;x.value=p[key]??''}x.setAttribute('aria-label',key+' '+p.address);let tid;if(type==='textarea'){x.addEventListener('input',()=>{clearTimeout(tid);tid=setTimeout(()=>save(p,key,x.value,x),800)});x.addEventListener('blur',()=>{clearTimeout(tid);save(p,key,x.value,x)})}else x.addEventListener('change',()=>save(p,key,x.value,x));return x}
 const cell=value=>{const t=node('td');if(value instanceof Node)t.append(value);else t.textContent=value;return t};
 const val=v=>v==null||v===''?'—':String(v);
+
+const imageHashes=new Map();
+async function imageFingerprint(url){
+ if(imageHashes.has(url))return imageHashes.get(url);
+ const task=(async()=>{
+  const image=new Image();image.crossOrigin='anonymous';image.decoding='async';image.src=url;await image.decode();
+  if(image.naturalWidth<100||image.naturalHeight<75)return {skip:true};
+  let hash=null;
+  try{
+   const canvas=document.createElement('canvas');canvas.width=9;canvas.height=8;
+   const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(image,0,0,9,8);
+   const rgba=ctx.getImageData(0,0,9,8).data;
+   const pixels=[];for(let i=0;i<rgba.length;i+=4)pixels.push(rgba[i]*.3+rgba[i+1]*.59+rgba[i+2]*.11);
+   hash=[];for(let y=0;y<8;y++)for(let x=0;x<8;x++)hash.push(pixels[y*9+x]>pixels[y*9+x+1]?1:0);
+  }catch(e){/* storage CORS unavailable: retain image with no fingerprint */}
+  return {hash};
+ })();
+ imageHashes.set(url,task);return task;
+}
+const dist=(a,b)=>a.reduce((n,v,i)=>n+(v!==b[i]?1:0),0);
+async function distinctPhotos(p,container){
+ const selected=[];
+ for(const src of (p.images||[])){
+  if(selected.length===4||!container.isConnected)break;
+  const url=await photo(src);if(!url)continue;
+  let candidate;
+  try{candidate=await imageFingerprint(url)}catch{continue}
+  if(candidate.skip)continue;
+  if(candidate.hash&&selected.some(s=>s.hash&&dist(candidate.hash,s.hash)<=7))continue;
+  selected.push({url,hash:candidate.hash});
+  const img=node('img','hh-photo'+(selected.length===1?' hh-photo-main':''));
+  img.alt='Property photograph '+selected.length;img.loading='lazy';img.src=url;img.onclick=()=>openHouse(p);container.append(img);
+ }
+ if(!selected.length&&container.isConnected)container.append(node('div','hh-photo-unavailable','No photos'));
+}
+function labelledEditor(p,label,key,type='text'){
+ const box=node('label','hh-field');
+ box.append(node('span','hh-mini',label),editor(p,key,type));
+ return box;
+}
+
 function render(list){
  rows=list;
  const head=node('thead'),hr=node('tr');for(const h of labels)hr.append(node('th','',h));head.append(hr);
@@ -26,30 +67,31 @@ function render(list){
  for(const p of list){
   const tr=node('tr');
   const house=node('div','hh-house'),photos=node('div','hh-photo-grid');
-  const pictures=(p.images||[]).slice(0,4);
-  for(let i=0;i<pictures.length;i++){
-   const img=node('img','hh-photo'+(i===0?' hh-photo-main':''));img.alt='Property photograph '+(i+1);img.loading='lazy';img.onclick=()=>openHouse(p);
-   photo(pictures[i]).then(u=>{if(u)img.src=u;else img.classList.add('hh-photo-missing')}).catch(()=>img.classList.add('hh-photo-missing'));
-   photos.append(img)
-  }
-  if(!pictures.length)photos.append(node('div','hh-photo-unavailable','No photos'));
-  const address=node('button','hh-address',clean(p.address||p.title));address.onclick=()=>openHouse(p);
+  distinctPhotos(p,photos).catch(e=>console.warn('Photo gallery',e));
+  const address=node('div','hh-address',clean(p.address||p.title));
+  address.contentEditable='true';address.setAttribute('role','textbox');address.setAttribute('aria-label','Property address, editable');
+  address.spellcheck=false;address.title='Edit property address';
+  address.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();address.blur()}});
+  address.addEventListener('blur',()=>save(p,'address',address.textContent.trim(),address));
   const link=node('a','hh-original','Listing ↗');link.href=p.url;link.target='_blank';link.rel='noopener noreferrer';
-  house.append(photos,address,link);tr.append(cell(house));
-  const price=cell(money(p.price));price.classList.add('hh-price');tr.append(price);
-  tr.append(cell(val(p.bedrooms)));
-  const bath=node('div','hh-stack');bath.append(node('div','','Bathrooms: '+val(p.bathrooms)),node('div','','Separate WC: '+val(p.wc_count)));tr.append(cell(bath));
-  tr.append(cell(val(p.floors)));
-  tr.append(cell(p.floor_area_sqm==null?'—':p.floor_area_sqm+' m²'));
-  const garden=node('div','hh-stack');if(p.garden_area_sqm!=null)garden.append(node('div','','Size: '+p.garden_area_sqm+' m²'));if(p.garden_description)garden.append(node('div','hh-garden',p.garden_description));if(!garden.children.length)garden.textContent='—';tr.append(cell(garden));
-  const station=node('div','hh-stack');
-  for(const [name,distance] of [[p.station_name,p.station_distance_miles],[p.station_2_name,p.station_2_distance_miles]]){
-   if(!name)continue;
-   const entry=node('div','hh-station',name);
-   if(distance!=null)entry.append(node('small','','~'+Number(distance).toFixed(2).replace(/0+$/,'').replace(/\.$/,'')+' mi walking'));
-   station.append(entry);
+  house.append(photos,address,link);
+  if((p.floorplans||[]).length){
+   const plan=node('button','hh-plan-link','Floor plan ↗');plan.onclick=()=>openHouse(p);house.append(plan);
   }
-  if(!station.children.length)station.textContent='—';
+  tr.append(cell(house));
+  const price=labelledEditor(p,'£','price','number');price.classList.add('hh-price-editor');tr.append(cell(price));
+  tr.append(cell(editor(p,'bedrooms','number')));
+  const bath=node('div','hh-stack');
+  bath.append(labelledEditor(p,'Bathrooms','bathrooms','number'),labelledEditor(p,'Separate WC','wc_count','number'));
+  tr.append(cell(bath));
+  tr.append(cell(editor(p,'floors','number')));
+  tr.append(cell(labelledEditor(p,'m²','floor_area_sqm','number')));
+  const garden=node('div','hh-stack');
+  garden.append(labelledEditor(p,'Size (m²)','garden_area_sqm','number'),labelledEditor(p,'Description','garden_description','textarea'));
+  tr.append(cell(garden));
+  const station=node('div','hh-stack');
+  station.append(labelledEditor(p,'Station 1','station_name'),labelledEditor(p,'Walking miles','station_distance_miles','number'));
+  station.append(labelledEditor(p,'Station 2','station_2_name'),labelledEditor(p,'Walking miles','station_2_distance_miles','number'));
   tr.append(cell(station));
   tr.append(cell(editor(p,'comment_sabina','textarea')));
   tr.append(cell(editor(p,'comment_david','textarea')));
