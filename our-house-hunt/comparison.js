@@ -47,7 +47,7 @@ const travelDestinations=[
  {id:'waterloo',title:'Waterloo',arrival:'07:40'}
 ];
 const journeyQueue=[],queuedJourneys=new Set(),journeyViews=new Map(),journeyRetryAfter=new Map();
-let travelProcessing=false,travelFailures=0;
+let travelProcessing=false,travelFailures=0,journeyPauseUntil=0;
 const journeyFresh=p=>travelDestinations.every(d=>{
  const v=p.journey_estimates?.[d.id];
  return v&&Number.isFinite(Number(v.minutes))&&v.origin===p.latitude+','+p.longitude&&Date.now()-Date.parse(v.calculated_at)<7*86400000
@@ -63,7 +63,7 @@ async function drainJourneyQueue(){
  if(travelProcessing)return;travelProcessing=true;
  while(journeyQueue.length){
   const p=journeyQueue.shift();
-  if(travelFailures>=3){queuedJourneys.delete(p.id);const v=journeyViews.get(p.id);if(v)for(const d of travelDestinations)if(v[d.id])v[d.id].textContent='Unavailable';continue;}
+  if(journeyPauseUntil>Date.now())await new Promise(resolve=>setTimeout(resolve,journeyPauseUntil-Date.now()));
   try{
    const r=await sb.functions.invoke('house-hunt-journeys',{body:{id:p.id}});
    if(r.error)throw r.error;
@@ -73,7 +73,7 @@ async function drainJourneyQueue(){
     if(view)for(const d of travelDestinations){const span=view[d.id];if(span)span.textContent=journeySummary(p,d)}
     travelFailures=0;
    }else throw Error(r.data?.error||'No estimates returned');
-  }catch(e){travelFailures++;journeyRetryAfter.set(p.id,Date.now()+180000);console.warn('Journey estimate:',e);
+  }catch(e){travelFailures++;journeyRetryAfter.set(p.id,Date.now()+180000);if(travelFailures>=3){journeyPauseUntil=Date.now()+90000;travelFailures=0;}console.warn('Journey estimate:',e);
    const view=journeyViews.get(p.id);if(view)for(const d of travelDestinations){if(view[d.id])view[d.id].textContent='Unavailable'}
   }
   queuedJourneys.delete(p.id);
@@ -89,7 +89,7 @@ function travelCell(p){
  }
  wrapper.append(node('small','hh-trip-help','Arrival time · typical Tuesday · public transport'));
  journeyViews.set(p.id,view);
- if(p.latitude!=null&&p.longitude!=null&&!journeyFresh(p)&&travelFailures<3&&!queuedJourneys.has(p.id)&&Date.now()>(journeyRetryAfter.get(p.id)||0)){
+ if(p.latitude!=null&&p.longitude!=null&&!journeyFresh(p)&&!queuedJourneys.has(p.id)&&Date.now()>(journeyRetryAfter.get(p.id)||0)){
    queuedJourneys.add(p.id);journeyQueue.push(p);void drainJourneyQueue();
  }
  if(p.latitude==null||p.longitude==null)for(const d of travelDestinations)view[d.id].textContent='Map point needed';
