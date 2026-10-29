@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#17372d">
   <link rel="stylesheet" href="{{ '/assets/mindset-lab.css' | relative_url }}?v=layout-20261027">
   {% include transition-design.html %}
-  <link rel="stylesheet" href="{{ "/assets/transition-design.css" | relative_url }}?v=paired-reference-20261029">
+  <link rel="stylesheet" href="{{ "/assets/transition-design.css" | relative_url }}?v=about-metrics-20261029">
 </head>
 <body class="transition-landing">
   <a class="skip-link" href="#main">Перейти к тексту</a>
@@ -56,6 +56,13 @@
         {% unless section.paired_layout %}
         <div class="section-heading"><h2 id="title-{{ section_id | escape }}">{{ section.title | escape }}</h2>
           {% if section.id == 'about' %}{% if p.portraits.about %}<figure class="about-portrait"><img src="{{ p.portraits.about | relative_url }}" alt="{{ p.portraits.about_alt | escape }}" width="1365" height="2048" loading="lazy" decoding="async"></figure>{% endif %}{% endif %}
+          {% if section.id == 'about' %}{% if p.about_metrics %}
+          <dl class="about-metrics">
+            {% for metric in p.about_metrics %}
+            <div class="about-metric"><dt>{{ metric.value | escape }}</dt><dd>{{ metric.label | escape }}</dd></div>
+            {% endfor %}
+          </dl>
+          {% endif %}{% endif %}
           {% if section.id == 'about' %}{% if p.about_story.body %}<button class="about-story-toggle" type="button" aria-controls="about-story-content" aria-expanded="false" hidden>{{ p.about_story.title | escape }}<span class="about-story-icon" aria-hidden="true">+</span></button>{% endif %}{% endif %}
         </div>
         <div class="prose section-body">{% if section.id == 'outcomes' %}{% include outcomes.html %}{% endif %}{% unless section.id == 'outcomes' %}{{ section.body }}{% endunless %}</div>

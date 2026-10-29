@@ -68,6 +68,20 @@ content:
     - name: about_alt
       label: Описание фото в блоке «Обо мне»
       type: string
+  - name: about_metrics
+    label: 'Обо мне: четыре показателя под фотографией'
+    type: object
+    list:
+      collapsible:
+        collapsed: true
+        summary: '{value}'
+    fields:
+    - name: value
+      label: Показатель
+      type: string
+    - name: label
+      label: Подпись
+      type: text
   - name: about_story
     label: 'Обо мне: история под плюсиком'
     type: object
