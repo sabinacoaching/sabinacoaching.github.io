@@ -42,10 +42,10 @@ const dist=(a,b)=>a.reduce((n,v,i)=>n+(v!==b[i]?1:0),0);
 async function distinctPhotos(p,container){
  const selected=[];
  for(const src of (p.images||[])){
-  if(selected.length===4||!container.isConnected)break;
+  if(selected.length===4)break;
   const url=await photo(src);if(!url)continue;
   let candidate;
-  try{candidate=await imageFingerprint(url)}catch{continue}
+  try{candidate=await imageFingerprint(url)}catch{candidate={hash:null}}
   if(candidate.skip)continue;
   if(candidate.hash&&selected.some(s=>s.hash&&dist(candidate.hash,s.hash)<=7))continue;
   selected.push({url,hash:candidate.hash});
