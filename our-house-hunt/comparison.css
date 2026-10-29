@@ -91,3 +91,23 @@
 .hh-map-house-line button{background:transparent;color:#1c493b;border:0;padding:0;text-align:left;font-weight:700;font-size:12px}
 .hh-map-kind{color:#75877c;font-size:12px;margin-top:4px}
 .hh-map .leaflet-control-layers{border-radius:9px;font-size:12px}
+
+/* Shared route comparison (arrival-time based TfL estimates). */
+.hh-table{min-width:1990px}
+.hh-table th:nth-child(9){min-width:194px}
+.hh-table th:nth-child(10),.hh-table th:nth-child(11){min-width:205px}
+.hh-table th:nth-child(12){min-width:165px}
+.hh-table th:nth-child(13){min-width:165px}
+.hh-table td:nth-child(9){background:#f8faf8}
+.hh-travel{display:flex;flex-direction:column;gap:9px;min-width:175px}
+.hh-trip{display:flex;flex-direction:column;gap:2px;border-bottom:1px solid #e6ece6;padding-bottom:7px}
+.hh-trip:last-of-type{border:0}
+.hh-trip-title{font-size:12px;line-height:1.35;color:#5c6f63;font-weight:600}
+.hh-trip-minutes{font-size:15px;font-variant-numeric:tabular-nums}
+.hh-trip-help{font-size:10px;color:#7d8c82}
+.hh-table td:nth-child(10) textarea,.hh-table td:nth-child(11) textarea{width:100%;min-width:185px;min-height:230px;resize:none;overflow:hidden;font-size:13px;line-height:1.5;padding:10px;box-sizing:border-box}
+.hh-table td:nth-child(10),.hh-table td:nth-child(11){min-width:205px}
+.hh-table td:nth-child(12) select{min-width:142px}
+.hh-table td:nth-child(13) input[type=datetime-local]{min-width:158px}
+.hh-transit-icon span{font-size:14px}
+@media(max-width:640px){.hh-table{min-width:1940px}.hh-table td:nth-child(10) textarea,.hh-table td:nth-child(11) textarea{min-width:175px}}
