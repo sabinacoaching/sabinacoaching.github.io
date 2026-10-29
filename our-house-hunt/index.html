@@ -106,12 +106,14 @@ async function enrichWalkingStations(p){
    lat=Number(coordinate.lat);lon=Number(coordinate.lon);
    await routeDelay(1100);
  }
- const q='[out:json][timeout:15];(node(around:4000,'+lat+','+lon+')['+'railway'+'='+'station'+'];node(around:4000,'+lat+','+lon+')['+'railway'+'='+'halt'+'];way(around:4000,'+lat+','+lon+')['+'railway'+'='+'station'+'];);out center tags;';
  // Standard Overpass QL railway tags quoted to avoid interpreting arbitrary user content as a query.
  const overpass='[out:json][timeout:15];(node(around:4000,'+lat+','+lon+')['+'"railway"="station"'+'];node(around:4000,'+lat+','+lon+')['+'"railway"="halt"'+'];way(around:4000,'+lat+','+lon+')['+'"railway"="station"'+'];);out center tags;';
- const res=await fetch('https://overpass.kumi.systems/api/interpreter?data='+encodeURIComponent(overpass),{headers:{Accept:'application/json'}});
- if(!res.ok)throw Error('Stations service '+res.status);
- const data=await res.json(),seen=new Set(),stations=[];
+ let data=null,lastError=null;
+ for(const endpoint of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']){
+   try{const res=await fetch(endpoint+'?data='+encodeURIComponent(overpass),{headers:{Accept:'application/json'}});if(!res.ok)throw Error('Station lookup HTTP '+res.status);data=await res.json();break}catch(e){lastError=e}
+ }
+ if(!data)throw lastError||Error('Station lookup unavailable');
+ const seen=new Set(),stations=[];
  for(const s of (data.elements||[])){
    const name=String(s.tags?.name||'').trim(),slat=Number(s.lat??s.center?.lat),slon=Number(s.lon??s.center?.lon);
    if(!name||!/^[\p{L}\d .,&'-]{2,80}$/u.test(name)||!Number.isFinite(slat)||!Number.isFinite(slon))continue;
@@ -134,8 +136,18 @@ async function enrichWalkingStations(p){
  routed.sort((a,b)=>a.miles-b.miles);
  if(!routed.length)return false;
  const update={};
- if(routed[0]){update.station_name=routed[0].name;update.station_distance_miles=routed[0].miles}
- if(routed[1]){update.station_2_name=routed[1].name;update.station_2_distance_miles=routed[1].miles}
+ // Never overwrite an existing named station chosen by either user.
+ const selected=new Set();
+ for(const [nameKey,distanceKey] of [['station_name','station_distance_miles'],['station_2_name','station_2_distance_miles']]){
+   if(!p[nameKey])continue;
+   const match=routed.find(x=>x.name.toLowerCase()===String(p[nameKey]).toLowerCase());
+   if(match){selected.add(match.name.toLowerCase());if(p[distanceKey]==null)update[distanceKey]=match.miles}
+ }
+ const available=routed.filter(x=>!selected.has(x.name.toLowerCase())&&![p.station_name,p.station_2_name].some(v=>String(v||'').toLowerCase()===x.name.toLowerCase()));
+ if(!p.station_name&&available[0]){update.station_name=available[0].name;update.station_distance_miles=available[0].miles;selected.add(available[0].name.toLowerCase())}
+ const remaining=available.filter(x=>!selected.has(x.name.toLowerCase()));
+ if(!p.station_2_name&&remaining[0]){update.station_2_name=remaining[0].name;update.station_2_distance_miles=remaining[0].miles}
+ if(!Object.keys(update).length)return false;
  const r=await sb.from('properties').update(update).eq('id',p.id);
  if(r.error)throw r.error;
  Object.assign(p,update);return true;
