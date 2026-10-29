@@ -20,7 +20,7 @@
 .hh-password-form p{min-height:18px;margin:0}
 @media(max-width:500px){.topright{gap:5px}.topright button{padding:7px 9px;font-size:12px}.topright strong{max-width:100%;font-size:12px}.hh-password-form{padding:17px}}
 </style>
-<link rel="stylesheet" href="./comparison.css?v=13">
+<link rel="stylesheet" href="./comparison.css?v=14">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'">
 </head><body>
 <header class="top"><div class="brand">⌂ &nbsp;<span>Our House Hunt</span></div><div class="topright"><strong id="who"></strong><button id="refresh" class="secondary" hidden>Refresh</button><button id="changePassword" class="secondary" hidden>Change password</button><button id="logout" class="secondary" hidden>Sign out</button></div></header>
@@ -60,7 +60,8 @@
 </dialog>
 <script type="module">
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.8';
-import {setupComparison} from './comparison.js?v=13';
+import {setupComparison} from './comparison.js?v=14';
+import {analyzeFloorplan} from './floorplan-ocr.js?v=1';
 const sb=createClient('https://ficnuovumurmhzdujjvj.supabase.co','sb_publishable_yrArzwZ2GizO5ATuiAkymg_LdpVZKC9');
 const $=id=>document.getElementById(id);
 const labels={saved:'Saved',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold'};
@@ -141,6 +142,7 @@ async function importHouse(raw){
  report('House added with '+images.length+' photographs. Available listing details were imported.');
  await refresh();
  enrichWalkingStations(p).then(changed=>{if(changed)refresh()}).catch(e=>console.warn('Walking stations not available',e));
+ analyzeFloorplan({sb,property:p,photo}).then(o=>{if(o.status==='saved')refresh()}).catch(e=>console.warn('Automatic floor plan reading unavailable',e));
 }
 async function enrichProperty(p){
  const data=await extension('IMPORT_URL',{url:p.url},70000);
@@ -163,7 +165,7 @@ async function updateFromListing(){
  if(!selected)return;
  const p=selected,button=$('enrich');
  button.disabled=true;button.textContent='Reading listing…';
- try{await probeImporter(true);const changed=await enrichProperty(p);await refresh();if(changed.length){await openHouse(p);alert('Updated listing details: '+changed.join(', '))}else alert('No additional verifiable details were found in this listing.')}
+ try{await probeImporter(true);const changed=await enrichProperty(p);const o=await analyzeFloorplan({sb,property:p,photo});if(o.status==='saved')changed.push(...o.fields);await refresh();if(changed.length){await openHouse(p);alert('Updated listing details: '+changed.join(', '))}else alert('No additional verifiable details were found in this listing.')}
  catch(e){alert('Could not update listing: '+e.message)}
  finally{button.disabled=false;button.textContent='Update listing data'}
 }
@@ -247,7 +249,27 @@ async function autoFillMissing(){
  }
  if(checked)report('Checked '+checked+' existing properties. '+(changedTotal?'Imported '+changedTotal+' additional fields. ':'')+'Details absent from the source remain empty.');
 }
-async function startAutoFill(){if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){report('Catalogue and comments work on mobile. Importing new listings requires Chrome with the extension on a computer.');return}if(await probeImporter())autoFillMissing().catch(e=>report('Automatic update unavailable: '+e.message,true))}
+async function fillPlanMeasurements(){
+ const pending=homes.filter(p=>p.floorplans?.length&&(p.floor_area_sqm==null||p.garden_area_sqm==null));
+ let filled=0;
+ for(const p of pending){
+   try{
+     const outcome=await analyzeFloorplan({sb,property:p,photo});
+     if(outcome.status==='saved'){filled+=outcome.fields.length;await refresh()}
+   }catch(e){console.warn('Floor plan OCR not available for '+p.address,e)}
+ }
+ if(filled)report('Floor plans: added '+filled+' measurements.');
+}
+async function startAutoFill(){
+ if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){
+  report('Catalogue works on mobile. Import and automatic floor plan reading are available in desktop Chrome.');
+  return
+ }
+ try{
+  if(await probeImporter())await autoFillMissing();
+  await fillPlanMeasurements();
+ }catch(e){console.warn('Automatic enrichment unavailable',e)}
+}
 async function refresh(){const r=await sb.from('properties').select('*').order('created_at',{ascending:false});if(r.error){report('Cannot load houses: '+r.error.message,true);return}homes=r.data||[];render();if(selected){const p=homes.find(x=>x.id===selected.id);if(p){selected=p;await loadNotes()}}}
 function render(){let rows=homes.filter(p=>($('stageFilter').value==='all'||p.status===$('stageFilter').value)&&(!$('search').value.trim()||(p.address+' '+p.title).toLowerCase().includes($('search').value.trim().toLowerCase())));if($('sort').value==='price_asc')rows.sort((a,b)=>(a.price??Infinity)-(b.price??Infinity));if($('sort').value==='price_desc')rows.sort((a,b)=>(b.price??0)-(a.price??0));
 const numeric=(v)=>v==null||v===''?null:Number(v);
