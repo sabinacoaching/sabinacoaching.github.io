@@ -46,7 +46,7 @@ function render(list){
   for(const [name,distance] of [[p.station_name,p.station_distance_miles],[p.station_2_name,p.station_2_distance_miles]]){
    if(!name)continue;
    const entry=node('div','hh-station',name);
-   if(distance!=null)entry.append(node('small','',Number(distance).toFixed(2).replace(/0+$/,'').replace(/\.$/,'')+' miles walking'));
+   if(distance!=null)entry.append(node('small','','~'+Number(distance).toFixed(2).replace(/0+$/,'').replace(/\.$/,'')+' mi walking'));
    station.append(entry);
   }
   if(!station.children.length)station.textContent='—';
