@@ -41,7 +41,49 @@ if(version<4){const msg='Chrome importer must be updated to version 0.4.0 for au
 if(!required)report('Importer connected. Missing details will be checked automatically.');
 return true}catch(e){const msg=e.message?.includes('updated')?e.message:'Chrome importer is not responding. Install/update the extension, press Reload at chrome://extensions, then reload this webpage.';report(msg,true);if(required)throw Error(msg);return false}}
 function blob64(base64,mime){const binary=atob(base64),arr=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)arr[i]=binary.charCodeAt(i);return new Blob([arr],{type:mime})}
-async function archive(urls,id,prefix='photo',limit=10){const saved=[];let i=0;for(const url of [...new Set(urls||[])].slice(0,limit*3)){if(saved.length>=limit)break;try{report('Saving photograph '+(saved.length+1)+'…');const data=await extension('FETCH_IMAGE',{url},20000);const blob=blob64(data.base64,data.mime);if(blob.size>5000000)continue;const ext=data.mime==='application/pdf'?'pdf':data.mime==='image/png'?'png':data.mime==='image/webp'?'webp':'jpg';const path=id+'/'+prefix+'-'+i+'.'+ext;const r=await sb.storage.from('property-photos').upload(path,blob,{contentType:data.mime,upsert:false});if(r.error)throw r.error;saved.push({path});i++}catch(e){console.warn('Cannot save photo',e)}}return saved}
+async function perceptualImageHash(blob){
+ if(!blob.type.startsWith('image/'))return null;
+ const bitmap=await createImageBitmap(blob);
+ try{
+  const canvas=document.createElement('canvas');canvas.width=17;canvas.height=16;
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  if(!ctx)return null;
+  ctx.drawImage(bitmap,0,0,17,16);
+  const pix=ctx.getImageData(0,0,17,16).data;
+  let hash='';
+  const bright=(x,y)=>{const i=(y*17+x)*4;return .299*pix[i]+.587*pix[i+1]+.114*pix[i+2]};
+  for(let y=0;y<16;y++)for(let x=0;x<16;x++)hash+=bright(x,y)>=bright(x+1,y)?'1':'0';
+  return hash;
+ }finally{bitmap.close()}
+}
+function hashDistance(a,b){let n=0;for(let i=0;i<a.length;i++)if(a[i]!==b[i])n++;return n}
+async function archive(urls,id,prefix='photo',limit=10){
+ const saved=[],hashes=[],seenUrls=new Set();
+ let index=0;
+ for(const sourceUrl of (urls||[]).slice(0,Math.max(limit*5,50))){
+  if(saved.length>=limit)break;
+  if(typeof sourceUrl!=='string'||seenUrls.has(sourceUrl))continue;
+  seenUrls.add(sourceUrl);
+  if(prefix==='photo'&&/\/(?:logo|avatar|icon|favicon|floor.?plans?)(?:[-._/]|$)/i.test(sourceUrl))continue;
+  try{
+   const data=await extension('FETCH_IMAGE',{url:sourceUrl},20000);
+   const blob=blob64(data.base64,data.mime);
+   if(blob.size<1300||blob.size>5000000)continue;
+   let hash=null;
+   try{hash=await perceptualImageHash(blob)}catch(e){console.warn('Cannot compare picture; preserving image',e)}
+   if(hash&&hashes.some(other=>hashDistance(hash,other)<=12))continue;
+   const ext=data.mime==='application/pdf'?'pdf':data.mime==='image/png'?'png':data.mime==='image/webp'?'webp':'jpg';
+   const path=id+'/'+prefix+'-'+index+'.'+ext;
+   report('Saving '+prefix+' '+(saved.length+1)+'…');
+   const up=await sb.storage.from('property-photos').upload(path,blob,{contentType:data.mime,upsert:false});
+   if(up.error)throw up.error;
+   if(hash)hashes.push(hash);
+   saved.push({path});index++;
+  }catch(e){console.warn('Cannot archive image',sourceUrl,e)}
+ }
+ return saved
+}
+
 async function importHouse(raw){
  await probeImporter(true);
  const url=listing(raw);
@@ -52,7 +94,7 @@ async function importHouse(raw){
  const data=await extension('IMPORT_URL',{url},70000);
  if(!data?.images?.length)throw Error('No photographs found. House not added.');
  const id=crypto.randomUUID();
- const images=await archive(data.images,id,'photo',10);
+ const images=await archive(data.images,id,'photo',24);
  if(!images.length)throw Error('Photographs could not be downloaded. House not added.');
  const floorplans=await archive(data.floorplans||[],id,'floorplan',5);
  const p={id,url,source:data.source,title:data.title||'',address:data.address||'',price:data.price||null,bedrooms:data.bedrooms??null,bathrooms:data.bathrooms??null,wc_count:data.wc_count??null,floors:data.floors??null,floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:data.garden_area_sqm??null,garden_description:data.garden_description||'',station_name:data.station_name||'',station_distance_miles:data.station_distance_miles??null,station_2_name:data.station_2_name||'',station_2_distance_miles:data.station_2_distance_miles??null,latitude:data.latitude??null,longitude:data.longitude??null,property_type:data.property_type||null,tenure:data.tenure||null,images,floorplans,created_by:user.id,status:'saved'};
