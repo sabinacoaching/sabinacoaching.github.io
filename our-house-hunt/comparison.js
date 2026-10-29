@@ -62,8 +62,8 @@ function journeySummary(p,d){
 async function drainJourneyQueue(){
  if(travelProcessing)return;travelProcessing=true;
  while(journeyQueue.length){
-  const p=journeyQueue.shift();queuedJourneys.delete(p.id);
-  if(travelFailures>=3)continue;
+  const p=journeyQueue.shift();
+  if(travelFailures>=3){queuedJourneys.delete(p.id);const v=journeyViews.get(p.id);if(v)for(const d of travelDestinations)if(v[d.id])v[d.id].textContent='Unavailable';continue;}
   try{
    const r=await sb.functions.invoke('house-hunt-journeys',{body:{id:p.id}});
    if(r.error)throw r.error;
@@ -76,6 +76,7 @@ async function drainJourneyQueue(){
   }catch(e){travelFailures++;console.warn('Journey estimate:',e);
    const view=journeyViews.get(p.id);if(view)for(const d of travelDestinations){if(view[d.id])view[d.id].textContent='Unavailable'}
   }
+  queuedJourneys.delete(p.id);
   await new Promise(resolve=>setTimeout(resolve,1350));
  }
  travelProcessing=false;
