@@ -73,3 +73,21 @@
 /* Floorplans belong beside the area measurement. */
 .hh-table td:nth-child(6) .hh-plan-link{display:inline-block;margin-top:3px;color:#315e50;text-decoration:underline;font-size:12px;font-weight:650;white-space:nowrap}
 .hh-table td:nth-child(6) .hh-plan-link:hover{text-decoration:none}
+
+/* Map improvements: prominent house pins and railway/Underground/bus overlays */
+.hh-map-tools{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:4px 0 12px}
+.hh-transport-summary{margin:0;color:#486b5d;font-size:13px}
+.hh-google-link,.hh-map-gm{font-size:12px;color:#28684d;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+.hh-property-pin-wrapper,.hh-transit-icon{background:transparent;border:0}
+.hh-property-pin{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:19px 19px 19px 3px;transform:rotate(-45deg);background:#245c4b;color:#fff;font-size:23px;font-weight:800;line-height:1;box-shadow:0 2px 6px #183b2866;border:2px solid white}
+.hh-property-pin::first-letter{transform:rotate(45deg)}
+.hh-transit-icon{display:grid;place-items:center;width:21px;height:21px;font:700 11px/1 system-ui}
+.hh-transit-icon span{width:21px;height:21px;display:grid;place-items:center;border-radius:5px;border:2px solid white;box-shadow:0 1px 5px #0004}
+.hh-transit-rail span{background:#205b8b;color:white}
+.hh-transit-tube span{background:#db2727;color:white;border-radius:50%}
+.hh-transit-tram span{background:#714c9f;color:white}
+.hh-transit-bus span{background:#f8d35a;color:#28382d}
+.hh-map-house-line{border-top:1px solid #e3ebe5;padding-top:7px;margin-top:7px;display:flex;flex-direction:column;gap:6px}
+.hh-map-house-line button{background:transparent;color:#1c493b;border:0;padding:0;text-align:left;font-weight:700;font-size:12px}
+.hh-map-kind{color:#75877c;font-size:12px;margin-top:4px}
+.hh-map .leaflet-control-layers{border-radius:9px;font-size:12px}
