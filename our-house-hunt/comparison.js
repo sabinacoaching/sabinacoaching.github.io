@@ -124,64 +124,100 @@ function scheduleTransport(){
 }
 async function loadTransport(){
  if(!map||!transportLayer)return;
- const zoom=map.getZoom(),b=map.getBounds();
- const sw=b.getSouthWest(),ne=b.getNorthEast();
+ const zoom=map.getZoom(),bounds=map.getBounds();
+ const sw=bounds.getSouthWest(),ne=bounds.getNorthEast();
  if(sw.lat<49||ne.lat>61||sw.lng< -9||ne.lng>3)return;
  const showBus=zoom>=15;
- const coords=[sw.lat,sw.lng,ne.lat,ne.lng].map(n=>n.toFixed(5)).join(',');
- const key=[zoom>=15?'bus':'rail',...[sw.lat,sw.lng,ne.lat,ne.lng].map(n=>n.toFixed(2))].join(':');
+ const key=[showBus?'bus':'rail',...[sw.lat,sw.lng,ne.lat,ne.lng].map(n=>n.toFixed(2))].join(':');
  const current=++transitVersion;
  let features=overpassCache.get(key);
  if(!features){
-  transitInfo.textContent='Loading railway stations and '+(showBus?'bus stops…':'Tube stations…');
-  const query='[out:json][timeout:18];('+
-   'node["railway"~"^(station|halt|tram_stop)$"]('+coords+');'+
-   'way["railway"~"^(station|halt)$"]('+coords+');'+
-   'node["station"="subway"]('+coords+');'+
-   (showBus?'node["highway"="bus_stop"]('+coords+');':'')+
-   ');out center tags 500;';
-  let error=null;
-  for(const endpoint of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']){
-   try{
-    const response=await fetch(endpoint+'?data='+encodeURIComponent(query),{headers:{Accept:'application/json'}});
-    if(!response.ok)throw Error('HTTP '+response.status);
-    const data=await response.json();
-    if(!Array.isArray(data.elements))throw Error('Invalid transport data');
-    features=data.elements;
-    overpassCache.set(key,features);
-    if(overpassCache.size>12)overpassCache.delete(overpassCache.keys().next().value);
-    break;
-   }catch(e){error=e}
+  transitInfo.textContent=showBus?'Loading nearby stops from TfL…':'Loading stations from TfL…';
+  const candidates=rows.filter(p=>p.latitude!=null&&p.longitude!=null&&bounds.contains([+p.latitude,+p.longitude]))
+   .map(p=>({lat:+p.latitude,lon:+p.longitude})).sort((a,b)=>a.lat-b.lat||a.lon-b.lon);
+  const centres=[];
+  if(showBus){const mid=map.getCenter();centres.push({lat:mid.lat,lon:mid.lng})}
+  else{
+   // A small number of spaced-out points covers the separate neighbourhoods without hitting TfL rate limits.
+   for(const p of candidates){
+    const close=centres.some(x=>Math.abs(x.lat-p.lat)<0.018&&Math.abs(x.lon-p.lon)<0.028);
+    if(!close)centres.push(p);
+    if(centres.length>=9)break;
+   }
+   if(!centres.length){const mid=map.getCenter();centres.push({lat:mid.lat,lon:mid.lng})}
   }
-  if(!features)throw error||Error('Transport map not available');
+  const radius=showBus?900:1800;
+  const stopTypes=showBus?'NaptanRailStation,NaptanMetroStation,NaptanPublicBusCoachTram':'NaptanRailStation,NaptanMetroStation';
+  const results=await Promise.allSettled(centres.map(async p=>{
+    const url='https://api.tfl.gov.uk/StopPoint?'+new URLSearchParams({lat:String(p.lat),lon:String(p.lon),radius:String(radius),stopTypes});
+    const res=await fetch(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
+    if(!res.ok)throw Error('TfL '+res.status);
+    const payload=await res.json();
+    return Array.isArray(payload.stopPoints)?payload.stopPoints:[];
+  }));
+  const ok=results.filter(x=>x.status==='fulfilled');
+  if(ok.length){
+   features=[];
+   for(const item of ok)for(const stop of item.value){
+    const modes=Array.isArray(stop.modes)?stop.modes:[];
+    const bus=stop.stopType==='NaptanPublicBusCoachTram'||modes.includes('bus');
+    const tube=stop.stopType==='NaptanMetroStation'||modes.includes('tube');
+    const tram=modes.includes('tram');
+    if(bus&&!showBus)continue;
+    const lat=Number(stop.lat),lon=Number(stop.lon);
+    if(!Number.isFinite(lat)||!Number.isFinite(lon))continue;
+    features.push({lat,lon,tags:{
+      name:String(stop.commonName||stop.fullName||''),
+      highway:bus?'bus_stop':null,
+      station:tube?'subway':null,
+      railway:bus?null:tram?'tram_stop':'station',
+      ref:(stop.lines||[]).slice(0,10).map(x=>x.name).filter(Boolean).join(', ')
+    }});
+   }
+   overpassCache.set(key,features);
+   if(overpassCache.size>14)overpassCache.delete(overpassCache.keys().next().value);
+  }else{
+   // Public Overpass is an optional fallback, not a required dependency.
+   const coords=[sw.lat,sw.lng,ne.lat,ne.lng].map(n=>n.toFixed(5)).join(',');
+   const query='[out:json][timeout:12];('+
+     'node["railway"~"^(station|halt|tram_stop)$"]('+coords+');'+
+     'node["station"="subway"]('+coords+');'+
+     (showBus?'node["highway"="bus_stop"]('+coords+');':'')+
+     ');out center tags 250;';
+   for(const endpoint of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']){
+    try{
+     const res=await fetch(endpoint+'?data='+encodeURIComponent(query),{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12500)});
+     if(!res.ok)continue;const d=await res.json();if(!Array.isArray(d.elements))continue;
+     features=d.elements;overpassCache.set(key,features);break;
+    }catch(e){console.warn('Overpass unavailable',e)}
+   }
+   if(!features)throw Error('TfL and OpenStreetMap transport services unavailable');
+  }
  }
  if(current!==transitVersion)return;
  transportLayer.clearLayers();
  const seen=new Set();let rails=0,buses=0;
  for(const t of features){
   const lat=Number(t.lat??t.center?.lat),lon=Number(t.lon??t.center?.lon),tags=t.tags||{};
-  if(!Number.isFinite(lat)||!Number.isFinite(lon))continue;
-  if(!b.contains([lat,lon]))continue;
+  if(!Number.isFinite(lat)||!Number.isFinite(lon)||!bounds.contains([lat,lon]))continue;
   const name=String(tags.name||'').trim();
-  const isBus=tags.highway==='bus_stop';
-  const isTram=tags.railway==='tram_stop';
-  const isTube=tags.station==='subway'||tags.network?.toLowerCase().includes('underground')||tags.name?.toLowerCase().includes('underground');
+  const isBus=tags.highway==='bus_stop',isTram=tags.railway==='tram_stop';
+  const isTube=tags.station==='subway'||String(tags.network||'').toLowerCase().includes('underground')||name.toLowerCase().includes('underground');
   const signature=[isBus?'bus':'rail',name.toLowerCase(),lat.toFixed(3),lon.toFixed(3)].join('|');
-  if(seen.has(signature))continue;
-  seen.add(signature);
+  if(seen.has(signature))continue;seen.add(signature);
   if(isBus)buses++;else rails++;
   const iconContent=isBus?'B':isTram?'T':isTube?'U':'R';
   const iconClass=isBus?'hh-transit-bus':isTube?'hh-transit-tube':isTram?'hh-transit-tram':'hh-transit-rail';
   const icon=L.divIcon({className:'hh-transit-icon '+iconClass,html:'<span>'+iconContent+'</span>',iconSize:[22,22],iconAnchor:[11,11]});
   const marker=L.marker([lat,lon],{icon,interactive:true,keyboard:false});
-  const title=name|| (isBus?'Bus stop':isTram?'Tram stop':isTube?'Tube station':'Rail station');
+  const title=name||(isBus?'Bus stop':isTram?'Tram stop':isTube?'Tube station':'Rail station');
   marker.bindTooltip(title,{direction:'top'});
   const box=node('div'),heading=node('strong','',title),type=node('div','hh-map-kind',isBus?'Bus stop':isTram?'Tram stop':isTube?'Underground':'Rail station');
   box.append(heading,type);
   if(tags.ref)box.append(node('div','',tags.ref));
   marker.bindPopup(box);marker.addTo(transportLayer);
  }
- transitInfo.textContent=rails+' rail / Tube / tram stops'+(showBus?' · '+buses+' bus stops':' · zoom in to see bus stops');
+ transitInfo.textContent=rails+' rail / Tube / tram stations'+(showBus?' · '+buses+' bus stops':' · zoom in for bus stops')+' · TfL / OpenStreetMap open data';
 }
 function redraw(){
  if(!map||!markers)return;
