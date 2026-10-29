@@ -12,7 +12,7 @@ const wrap=node('section','hh-table-shell'),table=node('table','hh-table'),mapPa
 wrap.append(table);mapPanel.append(mapMsg,mapDiv,missingDiv);mapPanel.hidden=true;$('cards').before(bar,wrap,mapPanel);
 let rows=[],mode='table',L=null,map=null,markers=null;
 function flash(msg,fail=false){notice.textContent=msg;notice.style.color=fail?'#af4b45':'#315e50';setTimeout(()=>{notice.textContent='Changes save for both of you.';notice.style.color=''},3000)}
-function selectMode(which){mode=which;tableBtn.classList.toggle('active',which==='table');mapBtn.classList.toggle('active',which==='map');cardsBtn.classList.toggle('active',which==='cards');wrap.hidden=which!=='table';mapPanel.hidden=which!=='map';$('cards').style.display=which==='cards'?'':'none';$('empty').hidden=which!=='cards'||!!rows.length;if(which==='map')showMap().catch(e=>{mapMsg.textContent='Map unavailable: '+e.message})}
+function selectMode(which){mode=which;tableBtn.classList.toggle('active',which==='table');mapBtn.classList.toggle('active',which==='map');cardsBtn.classList.toggle('active',which==='cards');wrap.hidden=which!=='table';mapPanel.hidden=which!=='map';$('cards').style.display=which==='cards'?'':'none';$('empty').hidden=which!=='cards'||!!rows.length;if(which==='map')showMap().catch(e=>{console.error('Property map',e);mapMsg.textContent='Map could not be loaded: '+e.message+' Select Table and then Map to retry.'})}
 tableBtn.onclick=()=>selectMode('table');mapBtn.onclick=()=>selectMode('map');cardsBtn.onclick=()=>selectMode('cards');selectMode('table');
 function cast(k,v){return nums.has(k)?(v===''?null:Number(v)):v}
 async function save(p,key,value,input){const val=cast(key,value);if(nums.has(key)&&val!==null&&!Number.isFinite(val)){flash('Invalid number',true);return}if(String(p[key]??'')===String(val??''))return;const r=await sb.from('properties').update({[key]:val}).eq('id',p.id).select(key).single();if(r.error){flash(r.error.message,true);input?.classList.add('hh-savefail');return}p[key]=val;input?.classList.remove('hh-savefail');flash('Saved')}
@@ -102,14 +102,42 @@ const googleHelp=node('a','hh-google-link','Open Google Maps ↗');googleHelp.hr
 const mapTools=node('div','hh-map-tools');mapTools.append(transitInfo,googleHelp);mapPanel.insertBefore(mapTools,mapDiv);
 let transportLayer=null,transportTimeout=null,transitVersion=0,overpassCache=new Map();
 const mapsFor=(p)=>'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(Number(p.latitude)+','+Number(p.longitude));
+let leafletLoader=null;
+async function ensureLeaflet(){
+ if(window.L?.map)return window.L;
+ if(leafletLoader)return leafletLoader;
+ leafletLoader=(async()=>{
+  const cdns=[
+    'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
+    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js'
+  ];
+  for(const src of cdns){
+   try{
+    await new Promise((resolve,reject)=>{
+     const script=document.createElement('script');
+     const timer=setTimeout(()=>{script.remove();reject(Error('Leaflet script timed out'))},9000);
+     script.src=src;script.async=true;
+     script.onload=()=>{clearTimeout(timer);resolve()};
+     script.onerror=()=>{clearTimeout(timer);script.remove();reject(Error('Leaflet script failed'))};
+     document.head.append(script);
+    });
+    if(window.L?.map)return window.L;
+   }catch(e){console.warn('Map library CDN unavailable',src,e)}
+  }
+  throw Error('Could not load the map library. Check your connection and select Map again.');
+ })().catch(e=>{leafletLoader=null;throw e});
+ return leafletLoader;
+}
 async function showMap(){
- if(!L){const mod=await import('https://esm.sh/leaflet@1.9.4');L=mod.default||mod}
+ mapMsg.textContent='Loading property map…';
+ L=await ensureLeaflet();
  if(!map){
   map=L.map(mapDiv,{zoomControl:true,preferCanvas:true}).setView([51.466,-.31],12);
   const voyager=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors © CARTO'});
   const street=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'});
-  voyager.addTo(map);
-  L.control.layers({'Detailed map':voyager,'Street map':street},null,{collapsed:true,position:'topright'}).addTo(map);
+  street.addTo(map);
+  L.control.layers({'Street map':street,'Detailed map':voyager},null,{collapsed:true,position:'topright'}).addTo(map);
   transportLayer=L.layerGroup().addTo(map);
   markers=L.layerGroup().addTo(map);
   map.on('moveend zoomend',scheduleTransport);
