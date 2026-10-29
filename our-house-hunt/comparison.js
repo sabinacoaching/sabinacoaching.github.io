@@ -46,7 +46,7 @@ const travelDestinations=[
  {id:'dilly',title:'The Dilly',arrival:'18:40'},
  {id:'waterloo',title:'Waterloo',arrival:'07:40'}
 ];
-const journeyQueue=[],queuedJourneys=new Set(),journeyViews=new Map();
+const journeyQueue=[],queuedJourneys=new Set(),journeyViews=new Map(),journeyRetryAfter=new Map();
 let travelProcessing=false,travelFailures=0;
 const journeyFresh=p=>travelDestinations.every(d=>{
  const v=p.journey_estimates?.[d.id];
@@ -67,17 +67,17 @@ async function drainJourneyQueue(){
   try{
    const r=await sb.functions.invoke('house-hunt-journeys',{body:{id:p.id}});
    if(r.error)throw r.error;
-   if(r.data?.journeys){
+   if(r.data?.journeys&&Object.values(r.data.journeys).some(x=>Number(x?.minutes)>0)){
     p.journey_estimates=r.data.journeys;
     const view=journeyViews.get(p.id);
     if(view)for(const d of travelDestinations){const span=view[d.id];if(span)span.textContent=journeySummary(p,d)}
     travelFailures=0;
    }else throw Error(r.data?.error||'No estimates returned');
-  }catch(e){travelFailures++;console.warn('Journey estimate:',e);
+  }catch(e){travelFailures++;journeyRetryAfter.set(p.id,Date.now()+180000);console.warn('Journey estimate:',e);
    const view=journeyViews.get(p.id);if(view)for(const d of travelDestinations){if(view[d.id])view[d.id].textContent='Unavailable'}
   }
   queuedJourneys.delete(p.id);
-  await new Promise(resolve=>setTimeout(resolve,1350));
+  await new Promise(resolve=>setTimeout(resolve,5200));
  }
  travelProcessing=false;
 }
@@ -89,7 +89,7 @@ function travelCell(p){
  }
  wrapper.append(node('small','hh-trip-help','Arrival time · typical Tuesday · public transport'));
  journeyViews.set(p.id,view);
- if(p.latitude!=null&&p.longitude!=null&&!journeyFresh(p)&&travelFailures<3&&!queuedJourneys.has(p.id)){
+ if(p.latitude!=null&&p.longitude!=null&&!journeyFresh(p)&&travelFailures<3&&!queuedJourneys.has(p.id)&&Date.now()>(journeyRetryAfter.get(p.id)||0)){
    queuedJourneys.add(p.id);journeyQueue.push(p);void drainJourneyQueue();
  }
  if(p.latitude==null||p.longitude==null)for(const d of travelDestinations)view[d.id].textContent='Map point needed';
