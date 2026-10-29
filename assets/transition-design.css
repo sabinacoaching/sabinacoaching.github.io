@@ -177,3 +177,7 @@
   #about .about-metric dt{font-size:clamp(23px,7vw,26px);letter-spacing:-.04em}
   #about .about-metric dd{font-size:12px}
 }
+
+/* Keep the longest experience figure inside its card. */
+#about .about-metric:nth-child(2) dt{font-size:24px}
+@media(max-width:380px){#about .about-metric:nth-child(2) dt{font-size:22px}}
