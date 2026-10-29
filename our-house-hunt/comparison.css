@@ -79,8 +79,8 @@
 .hh-transport-summary{margin:0;color:#486b5d;font-size:13px}
 .hh-google-link,.hh-map-gm{font-size:12px;color:#28684d;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
 .hh-property-pin-wrapper,.hh-transit-icon{background:transparent;border:0}
-.hh-property-pin{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:19px 19px 19px 3px;transform:rotate(-45deg);background:#245c4b;color:#fff;font-size:23px;font-weight:800;line-height:1;box-shadow:0 2px 6px #183b2866;border:2px solid white}
-.hh-property-pin::first-letter{transform:rotate(45deg)}
+.hh-property-pin{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:19px 19px 19px 3px;background:#245c4b;color:#fff;font-size:23px;font-weight:800;line-height:1;box-shadow:0 2px 6px #183b2866;border:2px solid white}
+
 .hh-transit-icon{display:grid;place-items:center;width:21px;height:21px;font:700 11px/1 system-ui}
 .hh-transit-icon span{width:21px;height:21px;display:grid;place-items:center;border-radius:5px;border:2px solid white;box-shadow:0 1px 5px #0004}
 .hh-transit-rail span{background:#205b8b;color:white}
