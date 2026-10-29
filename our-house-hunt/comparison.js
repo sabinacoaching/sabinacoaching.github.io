@@ -1,7 +1,7 @@
 export function setupComparison({sb,photo,openHouse}){
 const $=id=>document.getElementById(id),node=(tag,cls='',content)=>{const x=document.createElement(tag);x.className=cls;if(content!==undefined)x.textContent=content;return x};
 const statuses={saved:'Saved',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold'};
-const labels=['House','Price','Bedrooms','Bathrooms / WC','Floors','Total floor area','Garden','Nearest station','Sabina comments','David comments','Viewing status','Viewing date'];
+const labels=['House','Price','Bedrooms','Bathrooms / WC','Floors','Total floor area','Garden','Nearest station','Journey times','Sabina comments','David comments','Viewing status','Viewing date'];
 const extras=[['wc_count','Separate WC','number'],['floors','Floors','number'],['floor_area_sqm','Floor area (m²)','number'],['garden_area_sqm','Garden area (m²)','number'],['garden_description','Garden description','textarea'],['station_name','Nearest station 1','text'],['station_distance_miles','Walking distance 1 (miles)','number'],['station_2_name','Nearest station 2','text'],['station_2_distance_miles','Walking distance 2 (miles)','number'],['comment_sabina','Sabina comments','textarea'],['comment_david','David comments','textarea']];
 const nums=new Set(['bedrooms','bathrooms','wc_count','floors','floor_area_sqm','garden_area_sqm','station_distance_miles','station_2_distance_miles']);
 const money=p=>p==null?'—':new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP',maximumFractionDigits:0}).format(p);
@@ -37,6 +37,62 @@ function labelledEditor(p,label,key,type='text'){
  const box=node('label','hh-field');
  box.append(node('span','hh-mini',label),editor(p,key,type));
  return box;
+}
+
+
+/* Shared TfL arrival-time estimates. No guessed durations are displayed. */
+const travelDestinations=[
+ {id:'dancelab',title:'Dance Lab',arrival:'19:50'},
+ {id:'dilly',title:'The Dilly',arrival:'18:40'},
+ {id:'waterloo',title:'Waterloo',arrival:'07:40'}
+];
+const journeyQueue=[],queuedJourneys=new Set(),journeyViews=new Map();
+let travelProcessing=false,travelFailures=0;
+const journeyFresh=p=>travelDestinations.every(d=>{
+ const v=p.journey_estimates?.[d.id];
+ return v&&Number.isFinite(Number(v.minutes))&&v.origin===p.latitude+','+p.longitude&&Date.now()-Date.parse(v.calculated_at)<7*86400000
+});
+function journeySummary(p,d){
+ const v=p.journey_estimates?.[d.id];
+ if(v&&Number.isFinite(Number(v.minutes))&&v.minutes>0){
+   return '~'+Math.round(v.minutes)+' min';
+ }
+ return 'Calculating…';
+}
+async function drainJourneyQueue(){
+ if(travelProcessing)return;travelProcessing=true;
+ while(journeyQueue.length){
+  const p=journeyQueue.shift();queuedJourneys.delete(p.id);
+  if(travelFailures>=3)continue;
+  try{
+   const r=await sb.functions.invoke('house-hunt-journeys',{body:{id:p.id}});
+   if(r.error)throw r.error;
+   if(r.data?.journeys){
+    p.journey_estimates=r.data.journeys;
+    const view=journeyViews.get(p.id);
+    if(view)for(const d of travelDestinations){const span=view[d.id];if(span)span.textContent=journeySummary(p,d)}
+    travelFailures=0;
+   }else throw Error(r.data?.error||'No estimates returned');
+  }catch(e){travelFailures++;console.warn('Journey estimate:',e);
+   const view=journeyViews.get(p.id);if(view)for(const d of travelDestinations){if(view[d.id])view[d.id].textContent='Unavailable'}
+  }
+  await new Promise(resolve=>setTimeout(resolve,1350));
+ }
+ travelProcessing=false;
+}
+function travelCell(p){
+ const wrapper=node('div','hh-travel'),view={};
+ for(const d of travelDestinations){
+  const line=node('div','hh-trip'),title=node('span','hh-trip-title',d.title+' · '+d.arrival),minutes=node('strong','hh-trip-minutes',journeySummary(p,d));
+  line.append(title,minutes);wrapper.append(line);view[d.id]=minutes;
+ }
+ wrapper.append(node('small','hh-trip-help','Arrival time · typical Tuesday · public transport'));
+ journeyViews.set(p.id,view);
+ if(p.latitude!=null&&p.longitude!=null&&!journeyFresh(p)&&travelFailures<3&&!queuedJourneys.has(p.id)){
+   queuedJourneys.add(p.id);journeyQueue.push(p);void drainJourneyQueue();
+ }
+ if(p.latitude==null||p.longitude==null)for(const d of travelDestinations)view[d.id].textContent='Map point needed';
+ return wrapper;
 }
 
 function render(list){
@@ -76,6 +132,7 @@ function render(list){
   station.append(labelledEditor(p,'Station 1','station_name'),labelledEditor(p,'Walking miles','station_distance_miles','number'));
   station.append(labelledEditor(p,'Station 2','station_2_name'),labelledEditor(p,'Walking miles','station_2_distance_miles','number'));
   tr.append(cell(station));
+  tr.append(cell(travelCell(p)));
   tr.append(cell(editor(p,'comment_sabina','textarea')));
   tr.append(cell(editor(p,'comment_david','textarea')));
   tr.append(cell(editor(p,'status','select')));
