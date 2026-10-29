@@ -75,9 +75,6 @@ function render(list){
   address.addEventListener('blur',()=>save(p,'address',address.textContent.trim(),address));
   const link=node('a','hh-original','Listing ↗');link.href=p.url;link.target='_blank';link.rel='noopener noreferrer';
   house.append(photos,address,link);
-  if((p.floorplans||[]).length){
-   const plan=node('button','hh-plan-link','Floor plan ↗');plan.onclick=()=>openHouse(p);house.append(plan);
-  }
   tr.append(cell(house));
   const price=labelledEditor(p,'£','price','number');price.classList.add('hh-price-editor');tr.append(cell(price));
   tr.append(cell(editor(p,'bedrooms','number')));
@@ -85,7 +82,14 @@ function render(list){
   bath.append(labelledEditor(p,'Bathrooms','bathrooms','number'),labelledEditor(p,'Separate WC','wc_count','number'));
   tr.append(cell(bath));
   tr.append(cell(editor(p,'floors','number')));
-  tr.append(cell(labelledEditor(p,'m²','floor_area_sqm','number')));
+  const floorArea=node('div','hh-stack');floorArea.append(labelledEditor(p,'m²','floor_area_sqm','number'));
+  if((p.floorplans||[]).length){
+    const plan=node('a','hh-plan-link','Floor plan ↗');plan.href='#';plan.target='_blank';plan.rel='noopener noreferrer';plan.title='Open the original floor plan';
+    photo(p.floorplans[0]).then(u=>{if(u)plan.href=u}).catch(()=>{});
+    plan.addEventListener('click',e=>{if(plan.getAttribute('href')==='#'){e.preventDefault();openHouse(p)}});
+    floorArea.append(plan);
+  }
+  tr.append(cell(floorArea));
   const garden=node('div','hh-stack');
   garden.append(labelledEditor(p,'Size (m²)','garden_area_sqm','number'),labelledEditor(p,'Description','garden_description','textarea'));
   tr.append(cell(garden));
@@ -116,7 +120,7 @@ async function postcodeLocate(p){const a=p.address||p.title||'',full=a.match(/\b
 async function showMap(){if(!L){const mod=await import('https://esm.sh/leaflet@1.9.4');L=mod.default||mod}if(!map){map=L.map(mapDiv).setView([51.466,-.31],12);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);markers=L.layerGroup().addTo(map)}setTimeout(()=>map.invalidateSize(),200);redraw()}
 function redraw(){if(!map||!markers)return;markers.clearLayers();missingDiv.replaceChildren();const groups=new Map(),miss=[],bounds=[];for(const p of rows){if(p.latitude==null||p.longitude==null||!Number.isFinite(Number(p.latitude))||!Number.isFinite(Number(p.longitude))){miss.push(p);continue}const point=[Number(p.latitude),Number(p.longitude)];if(point[0]<49||point[0]>61||point[1]<-9||point[1]>3){miss.push(p);continue}const k=point.join(',');if(!groups.has(k))groups.set(k,[]);groups.get(k).push(p)}
 for(const g of groups.values()){const coord=[Number(g[0].latitude),Number(g[0].longitude)];bounds.push(coord);const popup=node('div');popup.append(node('strong','',g.length>1?g.length+' houses at approximate postcode location':clean(g[0].address)));for(const p of g){const b=node('button','',clean(p.address)+' · '+money(p.price));b.style.display='block';b.style.marginTop='5px';b.onclick=()=>openHouse(p);popup.append(b)}L.marker(coord).addTo(markers).bindPopup(popup)}
-if(bounds.length===1)map.setView(bounds[0],14);else if(bounds.length>1)map.fitBounds(bounds,{padding:[36,36],maxZoom:14});mapMsg.textContent=groups.size+' positions for '+rows.length+' houses. Postcode positions are approximate. Edit coordinates in property details for exact placement.';
+if(bounds.length===1)map.setView(bounds[0],14);else if(bounds.length>1)map.fitBounds(bounds,{padding:[36,36],maxZoom:14});mapMsg.textContent=groups.size+' map positions for '+rows.length+' houses. Source listing pins may be approximate.';
 if(miss.length){missingDiv.append(node('span','hh-help',miss.length+' without map coordinates: '));for(const p of miss){const b=node('button','',clean(p.address)+' · Locate');b.onclick=async()=>{b.disabled=true;try{if(await postcodeLocate(p)){flash('Postcode located');redraw()}else{b.disabled=false;b.textContent='Postcode unavailable'}}catch(e){b.disabled=false;flash(e.message,true)}};missingDiv.append(b)}}}
 return {render,open,edited};
 }
