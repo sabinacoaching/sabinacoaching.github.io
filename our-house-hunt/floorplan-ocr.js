@@ -23,7 +23,7 @@ const numeric=s=>Number(String(s).replace(',','.'));
 export function parsePlanText(original){
  const text=String(original||'').replace(/[×✕]/g,'x').replace(/(\d),(\d)/g,'$1.$2').replace(/\s+/g,' ');
  const result={},areaMatches=[
-   /(?:total\s+(?:internal\s+|gross\s+)?(?:floor\s+)?area|gross\s+internal\s+area|gia|approx(?:imate)?\s+floor\s+area)[\s:;./\-]{0,15}.{0,95}?(\d{2,3}(?:\.\d{1,2})?)\s*(?:sq\.?\s*m(?:etres?)?|sqm|m2|m²)\b/i,
+   /(?:total\s+(?:internal\s+|gross\s+)?(?:floor\s+)?area|gross\s+internal\s+area|gia|approx(?:imate)?\s+floor\s+area)[\s:;./\-]{0,15}.{0,95}?(\d{2,3}(?:\.\d{1,2})?)\s*(?:sq\.?\s*m(?:etres?)?|sqm|m2|m²)(?=\s|$|[.,;])/i,
    /(\d{2,3}(?:\.\d{1,2})?)\s*(?:sq\.?\s*m|sqm|m2|m²).{0,45}?(?:total\s+(?:internal\s+)?area|gross\s+internal\s+area)\b/i
  ];
  for(const rx of areaMatches){
