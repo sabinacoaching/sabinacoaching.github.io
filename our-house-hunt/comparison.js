@@ -1,10 +1,9 @@
 export function setupComparison({sb,photo,openHouse}){
 const $=id=>document.getElementById(id),node=(tag,cls='',content)=>{const x=document.createElement(tag);x.className=cls;if(content!==undefined)x.textContent=content;return x};
 const statuses={saved:'Saved',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected'};
-const cols=[['bedrooms','Beds','number'],['bathrooms','Bath','number'],['wc_count','WC','number'],['floors','Floors','number'],['floor_area_sqm','Area m²','number'],['garden_area_sqm','Garden m²','number'],['garden_description','Garden details','textarea'],['station_name','Station','text'],['station_distance_miles','Miles','number'],['station_walk_minutes','Walk min','number'],['bus_routes','Bus routes','text'],['bus_frequency_minutes','Every min','number'],['bus_travel_minutes','Bus min','number'],['comment_sabina','Sabina','textarea'],['comment_david','David','textarea']];
-const extras=[['wc_count','Separate WC','number'],['floors','Floors','number'],['floor_area_sqm','Floor area (m²)','number'],['garden_area_sqm','Garden size (m²)','number'],['garden_description','Garden details','textarea'],['station_name','Nearest station','text'],['station_distance_miles','Station distance (miles)','number'],['station_walk_minutes','Walk to station (min)','number'],['bus_routes','Bus routes','text'],['bus_frequency_minutes','Combined bus frequency (min)','number'],['bus_travel_minutes','Bus journey (min)','number'],['comment_sabina','Sabina comments','textarea'],['comment_david','David comments','textarea'],['latitude','Latitude (map)','number'],['longitude','Longitude (map)','number']];
-const nums=new Set(['bedrooms','bathrooms','wc_count','floors','floor_area_sqm','garden_area_sqm','station_distance_miles','station_walk_minutes','bus_frequency_minutes','bus_travel_minutes','latitude','longitude']);
-const labels=['Property','Price',...cols.map(c=>c[1]),'Stage','Viewing','Floor plan'];
+const extras=[['area_location','Area / location','text'],['wc_count','Separate WC','number'],['floors','Floors','number'],['floor_area_sqm','Total floor area (m²)','number'],['garden_area_sqm','Garden size (m²)','number'],['garden_description','Garden description','textarea'],['station_name','Nearest station','text'],['station_distance_miles','Station distance (miles)','number'],['station_walk_minutes','Walking time to station (min)','number'],['bus_routes','Bus routes','text'],['bus_travel_minutes','Bus to station (min)','number'],['bus_frequency_am_minutes','Morning bus frequency (min)','number'],['bus_frequency_pm_minutes','Evening bus frequency (min)','number'],['comment_sabina','Sabina comments','textarea'],['comment_david','David comments','textarea'],['latitude','Latitude (map)','number'],['longitude','Longitude (map)','number']];
+const nums=new Set(['bedrooms','bathrooms','wc_count','floors','floor_area_sqm','garden_area_sqm','station_distance_miles','station_walk_minutes','bus_travel_minutes','bus_frequency_am_minutes','bus_frequency_pm_minutes','latitude','longitude']);
+const labels=['House / link / floor plan','Price','Location','Bedrooms','Bathrooms / WC','Floors','Total floor area (m²)','Garden','Nearest station','Bus to station','Sabina comments','David comments','Viewing status','Viewing date'];
 const money=p=>p==null?'—':new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP',maximumFractionDigits:0}).format(p);
 const clean=x=>(x||'House').replace(/^\s*\d+\s+bed(?:room)?s?\s+(?:property|house|flat|apartment)?\s*(?:for sale|to rent)\s*/i,'').replace(/^\s*property\s+for\s+sale/i,'').replace(/\s*[-|]\s*zoopla.*$/i,'').trim();
 const mapsUrl=(p,mode)=>'https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(clean(p.address)+', UK')+'&destination='+encodeURIComponent(p.station_name+', railway station, UK')+'&travelmode='+mode;
@@ -20,11 +19,56 @@ function cast(k,v){return nums.has(k)?(v===''?null:Number(v)):v}
 async function save(p,key,value,input){const val=cast(key,value);if(nums.has(key)&&val!==null&&!Number.isFinite(val)){flash('Invalid number',true);return}if(String(p[key]??'')===String(val??''))return;const r=await sb.from('properties').update({[key]:val}).eq('id',p.id).select(key).single();if(r.error){flash(r.error.message,true);input?.classList.add('hh-savefail');return}p[key]=val;input?.classList.remove('hh-savefail');flash('Saved')}
 function editor(p,key,type='text'){let x=node(type==='textarea'?'textarea':type==='select'?'select':'input');if(type==='select'){for(const [v,label] of Object.entries(statuses)){const opt=node('option','',label);opt.value=v;x.append(opt)}x.value=p[key]||'saved'}else{if(type==='number'){x.type='number';x.step='any';x.min=key==='longitude'?'-9':key==='latitude'?'49':'0'}if(type==='textarea')x.rows=2;x.value=p[key]??''}x.setAttribute('aria-label',key+' '+p.address);let tid;if(type==='textarea'){x.addEventListener('input',()=>{clearTimeout(tid);tid=setTimeout(()=>save(p,key,x.value,x),1000)});x.addEventListener('blur',()=>{clearTimeout(tid);save(p,key,x.value,x)})}else x.addEventListener('change',()=>save(p,key,x.value,x));return x}
 const cell=value=>{const t=node('td');if(value instanceof Node)t.append(value);else t.textContent=value;return t};
-function render(list){rows=list;const head=node('thead'),hr=node('tr');for(const h of labels)hr.append(node('th','',h));head.append(hr);const body=node('tbody');
-for(const p of list){const tr=node('tr'),house=node('div','hh-house'),im=node('img');im.alt='House';im.loading='lazy';photo((p.images||[])[0]).then(u=>{if(u)im.src=u});const namebox=node('div'),title=node('button','',clean(p.address||p.title)),sub=node('small','',p.source||'');title.onclick=()=>openHouse(p);namebox.append(title,sub);house.append(im,namebox);tr.append(cell(house),cell(money(p.price)));
-for(const [key,_,type] of cols){const t=cell(editor(p,key,type));if(key==='station_name'&&p.station_name){const link=node('a','hh-maps','Google Maps: walking ↗');link.href=mapsUrl(p,'walking');link.target='_blank';link.rel='noopener noreferrer';t.append(link)}tr.append(t)}
-tr.append(cell(editor(p,'status','select')));const view=node('input');view.type='datetime-local';view.value=p.viewing_at?p.viewing_at.slice(0,16):'';view.onchange=async()=>{const val=view.value?new Date(view.value).toISOString():null;const r=await sb.from('properties').update({viewing_at:val}).eq('id',p.id);if(r.error)flash(r.error.message,true);else{p.viewing_at=val;flash('Saved')}};tr.append(cell(view));const plan=node('button','hh-plan',(p.floorplans||[]).length?'Floor plan':'Details');plan.onclick=()=>openHouse(p);tr.append(cell(plan));body.append(tr)}
-table.replaceChildren(head,body);if(mode==='map')redraw()}
+function render(list){
+rows=list;
+const head=node('thead'),hr=node('tr');
+for(const h of labels)hr.append(node('th','',h));
+head.append(hr);
+const body=node('tbody');
+const stacked=(blocks)=>{
+const holder=node('div','hh-stack');
+for(const [label,child] of blocks){const group=node('label','hh-field');group.append(node('span','hh-mini',label),child);holder.append(group)}
+return holder};
+for(const p of list){
+const tr=node('tr');
+const house=node('div','hh-house'),im=node('img');
+im.alt='House';im.loading='lazy';photo((p.images||[])[0]).then(u=>{if(u)im.src=u});
+const namebox=node('div'),title=node('button','',clean(p.address||p.title));
+title.onclick=()=>openHouse(p);
+namebox.append(title);
+const source=node('small','',p.source||'');namebox.append(source);
+const link=node('a','hh-original','Listing ↗');link.href=p.url;link.target='_blank';link.rel='noopener noreferrer';namebox.append(link);
+if((p.floorplans||[]).length){
+const floor=node('button','hh-floorlink','Floor plan ↗');floor.onclick=()=>openHouse(p);namebox.append(floor)}
+else{namebox.append(node('small','','Floor plan not available'))}
+house.append(im,namebox);tr.append(cell(house));
+const price=cell(money(p.price));price.classList.add('hh-price');tr.append(price);
+tr.append(cell(editor(p,'area_location')));
+tr.append(cell(editor(p,'bedrooms','number')));
+tr.append(cell(stacked([['Bathroom',editor(p,'bathrooms','number')],['Separate WC',editor(p,'wc_count','number')]])));
+tr.append(cell(editor(p,'floors','number')));
+tr.append(cell(editor(p,'floor_area_sqm','number')));
+tr.append(cell(stacked([['Size (m²)',editor(p,'garden_area_sqm','number')],['Description',editor(p,'garden_description','textarea')]])));
+const station=stacked([['Station',editor(p,'station_name')],['Walk (min)',editor(p,'station_walk_minutes','number')],['Distance (miles)',editor(p,'station_distance_miles','number')]]);
+if(p.station_name){const g=node('a','hh-maps','Check Google Maps ↗');g.href=mapsUrl(p,'walking');g.target='_blank';g.rel='noopener noreferrer';station.append(g)}
+tr.append(cell(station));
+const bus=stacked([['Routes',editor(p,'bus_routes')],['Journey to station (min)',editor(p,'bus_travel_minutes','number')],['Morning frequency (min)',editor(p,'bus_frequency_am_minutes','number')],['Evening frequency (min)',editor(p,'bus_frequency_pm_minutes','number')]]);
+if(p.bus_frequency_minutes!=null&&p.bus_frequency_am_minutes==null&&p.bus_frequency_pm_minutes==null){bus.append(node('small','hh-oldfrequency','Previous frequency: every '+p.bus_frequency_minutes+' min (time unspecified)'))}
+tr.append(cell(bus));
+tr.append(cell(editor(p,'comment_sabina','textarea')));
+tr.append(cell(editor(p,'comment_david','textarea')));
+tr.append(cell(editor(p,'status','select')));
+const view=node('input');view.type='datetime-local';view.value=p.viewing_at?p.viewing_at.slice(0,16):'';
+view.setAttribute('aria-label','Viewing date for '+(p.address||p.title));
+view.onchange=async()=>{const val=view.value?new Date(view.value).toISOString():null;const r=await sb.from('properties').update({viewing_at:val}).eq('id',p.id);if(r.error)flash(r.error.message,true);else{p.viewing_at=val;flash('Saved')}};
+tr.append(cell(view));
+if(tr.cells.length!==labels.length)throw Error('Comparison table columns mismatch');
+body.append(tr);
+}
+table.replaceChildren(head,body);
+$('empty').hidden=!!rows.length;
+if(mode==='map')redraw()
+}
 const detail=node('section','hh-aux'),detailGrid=node('div','hh-auxgrid'),controls={};detail.append(node('h3','','Comparison details'),node('p','hh-help','These are shared fields. Press Save changes below.'),detailGrid);
 for(const [key,label,type] of extras){const l=node('label',type==='textarea'?'wide':'');l.append(document.createTextNode(label));const x=node(type==='textarea'?'textarea':'input');if(type==='textarea')x.rows=2;else{x.type=type;if(type==='number')x.step='any'}l.append(x);controls[key]=x;detailGrid.append(l)}
 $('dialog').querySelector('.actions').before(detail);
