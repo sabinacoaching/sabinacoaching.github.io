@@ -219,7 +219,14 @@ async function importHouse(raw){
  report(missing.length?'House saved. Still missing: '+missing.join(', ')+'. Automatic checks will retry on the next visit.':'House imported with location, stations and essential details. Journey times are being calculated.',!!failures.length);
 }
 async function enrichProperty(p){
- const data=await extension('IMPORT_URL',{url:p.url},70000);
+ let data;
+ try{data=await extension('IMPORT_URL',{url:p.url},70000)}
+ catch(e){
+   // Record the failure so its cause remains inspectable without asking for screenshots.
+   const result={source:'original-listing',status:'extension-error',error:String(e.message||e).slice(0,300),attempted_at:new Date().toISOString()};
+   await sb.from('properties').update({import_diagnostics:result}).eq('id',p.id);
+   throw e;
+ }
  const details={};
  p._floorplan_import={status:data.floorplan_status||'unknown',tabFound:!!data.floorplan_diagnostic?.tabFound,tabClicked:!!data.floorplan_diagnostic?.tabClicked,found:(data.floorplans||[]).length,archived:0,error:data.floorplan_diagnostic?.error||null};
  for(const key of ['bedrooms','floor_area_sqm','garden_description','station_name','station_distance_miles','station_2_name','station_2_distance_miles','latitude','longitude']){
@@ -235,12 +242,18 @@ async function enrichProperty(p){
    p._floorplan_import.archived=plans.length;
    if(plans.length)details.floorplans=plans;
  }
- if(Object.keys(details).length){
-   const r=await sb.from('properties').update(details).eq('id',p.id);
-   if(r.error)throw r.error;
-   Object.assign(p,details);
- }
- return Object.keys(details);
+ const savedFields=Object.keys(details);
+ details.import_diagnostics={
+   source:'original-listing',version:data.extension_version||'unknown',
+   status:p._floorplan_import.status,tab_found:p._floorplan_import.tabFound,
+   tab_clicked:p._floorplan_import.tabClicked,candidates:p._floorplan_import.found,
+   archived:p._floorplan_import.archived,error:p._floorplan_import.error,
+   attempted_at:new Date().toISOString()
+ };
+ const r=await sb.from('properties').update(details).eq('id',p.id);
+ if(r.error)throw r.error;
+ Object.assign(p,details);
+ return savedFields;
 }
 async function updateFromListing(){
  if(!selected)return;
