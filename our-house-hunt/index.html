@@ -83,7 +83,7 @@ dialog.hh-photo-viewer[open]{display:flex;flex-direction:column}
 <script type="module">
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 import {setupComparison} from './comparison.js?v=16';
-import {analyzeFloorplan} from './floorplan-ocr.js?v=3';
+import {analyzeFloorplan} from './floorplan-ocr.js?v=4';
 const sb=createClient('https://ficnuovumurmhzdujjvj.supabase.co','sb_publishable_yrArzwZ2GizO5ATuiAkymg_LdpVZKC9');
 const $=id=>document.getElementById(id);
 const labels={saved:'Saved',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold'};
@@ -174,6 +174,22 @@ async function archive(urls,id,prefix='photo',limit=10){
  return saved
 }
 
+
+/* Accept a calculated garden size only when the listing itself explicitly labels the dimensions. */
+function verifiedGardenArea(data){
+ const txt=String(data.garden_description||'').replace(/[×✕]/g,'x').replace(/(\d),(\d)/g,'$1.$2');
+ const pair=txt.match(/\bgarden\s*(?:(?:measures?|dimensions?|size|approx(?:imately)?|is)\s*[:\-]?\s*){0,2}(\d{1,2}(?:\.\d{1,2})?)\s*(?:m|metres?)?\s*(?:x|by)\s*(\d{1,2}(?:\.\d{1,2})?)\s*(?:m|metres?)\b/i);
+ if(pair){const w=Number(pair[1]),l=Number(pair[2]),n=w*l;
+  if(w>=1.5&&l>=1.5&&w<=50&&l<=75&&n>=8&&n<=1500){
+   const listed=Number(data.garden_area_sqm);
+   return data.garden_area_sqm==null||!Number.isFinite(listed)||Math.abs(listed-n)<=Math.max(1,n*.03)?Math.round(n*100)/100:null;
+  }
+ }
+ const explicit=txt.match(/\bgarden\s*(?:(?:area|size|measures?|approximately|approx)\s*[:\-]?\s*){0,2}(\d{1,4}(?:\.\d{1,2})?)\s*(?:sqm|sq\.?\s*m(?:etres?)?|m²|m2)\b/i);
+ if(explicit){const n=Number(explicit[1]);if(n>=8&&n<=1500)return n}
+ return null;
+}
+
 async function importHouse(raw){
  await probeImporter(true);
  const url=listing(raw);
@@ -189,7 +205,7 @@ async function importHouse(raw){
  // Reject duplicated URLs; the extension's floor-plan classification still needs a separate visual validation step.
  const floorplanCandidates=(data.floorplans||[]).filter(u=>!(data.images||[]).includes(u));
  const floorplans=await archive(floorplanCandidates,id,'floorplan',5);
- const p={id,url,source:data.source,title:data.title||'',address:data.address||'',price:data.price||null,bedrooms:data.bedrooms??null,bathrooms:data.bathrooms??null,wc_count:data.wc_count??null,floors:data.floors??null,floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:data.garden_area_sqm??null,garden_description:data.garden_description||'',station_name:data.station_name||'',station_distance_miles:data.station_distance_miles??null,station_2_name:data.station_2_name||'',station_2_distance_miles:data.station_2_distance_miles??null,latitude:data.latitude??null,longitude:data.longitude??null,property_type:data.property_type||null,tenure:data.tenure||null,images,floorplans,created_by:user.id,status:'saved'};
+ const p={id,url,source:data.source,title:data.title||'',address:data.address||'',price:data.price||null,bedrooms:data.bedrooms??null,bathrooms:data.bathrooms??null,wc_count:data.wc_count??null,floors:data.floors??null,floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:verifiedGardenArea(data),garden_description:data.garden_description||'',station_name:data.station_name||'',station_distance_miles:data.station_distance_miles??null,station_2_name:data.station_2_name||'',station_2_distance_miles:data.station_2_distance_miles??null,latitude:data.latitude??null,longitude:data.longitude??null,property_type:data.property_type||null,tenure:data.tenure||null,images,floorplans,created_by:user.id,status:'saved'};
  const r=await sb.from('properties').insert(p);
  if(r.error)throw r.error;
  report('House saved with '+images.length+' photographs. Completing location, stations and floor plan…');
@@ -204,9 +220,10 @@ async function importHouse(raw){
 async function enrichProperty(p){
  const data=await extension('IMPORT_URL',{url:p.url},70000);
  const details={};
- for(const key of ['bedrooms','bathrooms','wc_count','floors','floor_area_sqm','garden_area_sqm','garden_description','station_name','station_distance_miles','station_2_name','station_2_distance_miles','latitude','longitude']){
+ for(const key of ['bedrooms','bathrooms','wc_count','floors','floor_area_sqm','garden_description','station_name','station_distance_miles','station_2_name','station_2_distance_miles','latitude','longitude']){
    if((p[key]==null||p[key]==='')&&data[key]!=null&&data[key]!=='')details[key]=data[key];
  }
+ if(p.garden_area_sqm==null){const garden=verifiedGardenArea(data);if(garden!=null)details.garden_area_sqm=garden}
  if((!p.floorplans||!p.floorplans.length)&&(data.floorplans||[]).length){
    const plans=await archive((data.floorplans||[]).filter(u=>!(data.images||[]).includes(u)),p.id,'floorplan',5);
    if(plans.length)details.floorplans=plans;
