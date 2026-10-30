@@ -374,7 +374,7 @@ async function autoFillMissing(){
  if(!homes.length)return;
  // Source re-reading is expensive; location/transport enrichment runs independently below.
  const nelsonId='70414489-c568-4aee-9c79-09e58b7a8e2d';
- const pending=homes.filter(p=>!p.floorplans?.length||p.floor_area_sqm==null||p.bathrooms==null||p.floors==null||!p.garden_description)
+ const pending=homes.filter(p=>!p.floorplans?.length||p.floor_area_sqm==null||p.bathrooms==null||p.floors==null)
    .sort((a,b)=>Number(b.id===nelsonId)-Number(a.id===nelsonId));
  let checked=0,changedTotal=0;const unresolved=[];
  for(const p of pending){
