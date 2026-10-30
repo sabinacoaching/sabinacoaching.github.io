@@ -1,5 +1,5 @@
 import {setupStationAccess} from './station-commutes.js?v=16';
-export function setupComparison({sb,history,photo,openHouse,openPhotoBrowser,onReorder,canReorder,onStatusChange,shouldAutoCalculate,onRestore,getStatusSelection,onStatusFilterChange}){
+export function setupComparison({sb,history,photo,uniquePhotos,openHouse,openPhotoBrowser,onReorder,canReorder,onStatusChange,shouldAutoCalculate,onRestore,getStatusSelection,onStatusFilterChange}){
 const stationAccess=setupStationAccess({sb,history,shouldAutoCalculate});
 const $=id=>document.getElementById(id),node=(tag,cls='',content)=>{const x=document.createElement(tag);x.className=cls;if(content!==undefined)x.textContent=content;return x};
 const statuses={'':'—',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold',archived:'Archive (hide)',deleted:'Delete (move to trash)'};
@@ -34,7 +34,7 @@ const cell=value=>{const t=node('td');if(value instanceof Node)t.append(value);e
 const val=v=>v==null||v===''?'—':String(v);
 
 async function distinctPhotos(p,container){
-  const photos=(p.images||[]).slice(0,4);
+  const photos=await uniquePhotos(p,4);
   if(!photos.length){container.append(node('div','hh-photo-unavailable','No photos'));return}
   for(let i=0;i<photos.length;i++){
     const img=node('img','hh-photo'+(i===0?' hh-photo-main':''));
