@@ -68,7 +68,7 @@ Deno.serve(async req=>{
   if(member.error||!member.data)return send({error:"Not a member"},403);
   const {id,dry_run=false}=await req.json();
   if(typeof id!=="string"||!/^[0-9a-f-]{36}$/i.test(id))return send({error:"Invalid property ID"},400);
-  const found=await db.from("properties").select("id,address,station_name,station_2_name,station_3_name,station_commutes,journey_estimates").eq("id",id).single();
+  const found=await db.from("properties").select("id,address,updated_at,station_name,station_2_name,station_3_name,station_commutes,journey_estimates").eq("id",id).single();
   if(found.error||!found.data)return send({error:"Property not found"},404);
   const p=found.data,key=Deno.env.get("GOOGLE_MAPS_API_KEY");
   if(!key)return send({error:"Google Maps API key is not configured; no data changed"},503);
@@ -101,8 +101,9 @@ Deno.serve(async req=>{
   for(const [dest,result] of Object.entries(updates))if(newJourneys[dest]?.manual_override!==true)newJourneys[dest]=result;
   const old=p.station_commutes||{};
   const googleRoutes={origin:p.address,stations:names,results:stationResults,source:"Google Routes API",complete:stationResults.length>0&&stationResults.every(x=>x.walking_minutes!=null),calculated_at:new Date().toISOString(),origin_place_id:origin};
-  const update=await db.from("properties").update({journey_estimates:newJourneys,station_commutes:{...old,google_routes:googleRoutes}}).eq("id",id).eq("address",p.address);
+  const update=await db.from("properties").update({journey_estimates:newJourneys,station_commutes:{...old,google_routes:googleRoutes}}).eq("id",id).eq("address",p.address).eq("updated_at",p.updated_at).select("id");
   if(update.error)return send({error:"Could not save validated routes",detail:update.error.message},500);
+  if(!update.data?.length)return send({error:"The property changed during Google verification. No calculated values overwritten; refresh and retry."},409);
   return send({...summary,saved:true});
  }catch(e){return send({error:String(e)},500)}
 });
