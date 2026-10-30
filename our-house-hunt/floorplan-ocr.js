@@ -72,6 +72,18 @@ export function parsePlanText(original){
  }
  return result;
 }
+// Reject photos mistakenly categorised as floor plans by a listing's gallery.
+// Conservative validation: an unrecognisable image is not silently stored as a plan.
+export async function validateFloorplanImage(blob){
+ if(!blob?.type?.startsWith('image/'))return false;
+ try{
+  const worker=await getWorker(),result=await worker.recognize(blob);
+  const text=String(result.data?.text||'');
+  const labels=(text.match(/\b(?:bedroom|bathroom|kitchen|reception|living\s+room|dining\s+room|ground\s+floor|first\s+floor|second\s+floor|total\s+area|approx(?:imate)?\s+area|en[\s-]?suite|garden)\b/gi)||[]);
+  const variety=new Set(labels.map(x=>x.toLowerCase()));
+  return labels.length>=3&&variety.size>=2;
+ }catch(e){console.warn('Floorplan image validation failed',e);return false}
+}
 export async function analyzeFloorplan({sb,property,photo}){
  const p=property;
  if(!p?.id||!(p.floorplans||[]).length)return {status:'not-needed'};
