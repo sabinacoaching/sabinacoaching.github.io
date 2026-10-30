@@ -93,8 +93,8 @@ export function setupStationAccess({sb,history}){
   walk.title='Click to edit walking miles and minutes';walk.classList.add('hh-route-editable');
   pt.title='Click to edit PT minutes';pt.classList.add('hh-route-editable');
   walk.tabIndex=0;pt.tabIndex=0;walk.setAttribute('role','button');pt.setAttribute('role','button');
-  walk.onclick=()=>editLine(p,i,'walking',walk);
-  pt.onclick=()=>editLine(p,i,'pt',pt);
+  walk.onclick=e=>{if(e.target===walk)editLine(p,i,'walking',walk)};
+  pt.onclick=e=>{if(e.target===pt)editLine(p,i,'pt',pt)};
   walk.onkeydown=e=>{if(e.target===walk&&(e.key==='Enter'||e.key===' ')){e.preventDefault();editLine(p,i,'walking',walk)}};
   pt.onkeydown=e=>{if(e.target===pt&&(e.key==='Enter'||e.key===' ')){e.preventDefault();editLine(p,i,'pt',pt)}};
   box.append(walk,link,pt);
