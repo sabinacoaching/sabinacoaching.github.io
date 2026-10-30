@@ -1,5 +1,5 @@
 import {setupStationAccess} from './station-commutes.js?v=16';
-export function setupComparison({sb,history,photo,openHouse,openPhotoBrowser,onReorder,canReorder,onStatusChange,shouldAutoCalculate,onRestore}){
+export function setupComparison({sb,history,photo,openHouse,openPhotoBrowser,onReorder,canReorder,onStatusChange,shouldAutoCalculate,onRestore,getStatusSelection,onStatusFilterChange}){
 const stationAccess=setupStationAccess({sb,history,shouldAutoCalculate});
 const $=id=>document.getElementById(id),node=(tag,cls='',content)=>{const x=document.createElement(tag);x.className=cls;if(content!==undefined)x.textContent=content;return x};
 const statuses={'':'—',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold',archived:'Archive (hide)',deleted:'Delete (move to trash)'};
@@ -134,11 +134,63 @@ function travelCell(p){
 
 function render(list){
  rows=list;
- const head=node('thead'),hr=node('tr');for(const h of labels)hr.append(node('th','',h));head.append(hr);
+ const head=node('thead'),hr=node('tr');
+ for(const title of labels){
+  const th=node('th','',title);
+  if(title==='Viewing status'){
+   th.classList.add('hh-status-filter-heading');
+   const trigger=node('button','hh-status-filter-button','▾ Filter');
+   trigger.type='button';trigger.title='Filter the table by viewing status';
+   const menu=node('div','hh-status-filter-menu');menu.hidden=true;
+   const heading=node('strong','','Viewing status');
+   const options=node('div','hh-status-filter-options');
+   const checks=new Map();
+   const selectedNow=new Set(getStatusSelection?.()||Object.keys(statuses).filter(s=>s!=='archived'&&s!=='deleted'));
+   for(const [status,label] of Object.entries(statuses)){
+    const option=node('label','hh-status-filter-option');
+    const input=node('input');input.type='checkbox';input.value=status;input.checked=selectedNow.has(status);
+    option.append(input,node('span','',status===''?'No status':label.replace(' (hide)','').replace(' (move to trash)','')));
+    options.append(option);checks.set(status,input);
+   }
+   const quick=node('div','hh-status-filter-quick');
+   const active=node('button','','All active'),all=node('button','','All statuses');
+   active.type=all.type='button';
+   active.onclick=()=>{for(const [key,input] of checks)input.checked=key!=='archived'&&key!=='deleted'};
+   all.onclick=()=>{for(const input of checks.values())input.checked=true};
+   quick.append(active,all);
+   const actions=node('div','hh-status-filter-actions');
+   const cancel=node('button','','Cancel'),apply=node('button','','Apply');
+   cancel.type=apply.type='button';
+   cancel.onclick=()=>{menu.hidden=true};
+   apply.onclick=()=>{
+    const chosen=[...checks].filter(([,input])=>input.checked).map(([key])=>key);
+    if(!chosen.length){alert('Select at least one viewing status.');return}
+    menu.hidden=true;onStatusFilterChange?.(chosen);
+   };
+   actions.append(cancel,apply);
+   menu.append(heading,quick,options,actions);
+   menu.addEventListener('click',e=>e.stopPropagation());
+   trigger.onclick=e=>{e.stopPropagation();menu.hidden=!menu.hidden};
+   th.append(trigger,menu);
+  }
+  hr.append(th);
+ }
+ head.append(hr);
  const body=node('tbody');
  table.replaceChildren(head,body);
- let dragId=null;
- for(const p of list){
+ let dragId=null,scrollTimer=null,scrollVelocity=0;
+ const stopDragScroll=()=>{if(scrollTimer!==null){clearInterval(scrollTimer);scrollTimer=null}scrollVelocity=0};
+ const autoScroll=e=>{
+  if(!dragId||!e.clientY)return;
+  const r=wrap.getBoundingClientRect(),edge=78;
+  const next=e.clientY<r.top+edge?-22:e.clientY>r.bottom-edge?22:0;
+  if(next===scrollVelocity)return;
+  stopDragScroll();scrollVelocity=next;
+  if(next)scrollTimer=setInterval(()=>{wrap.scrollTop+=next},28);
+ };
+ wrap.ondragover=e=>{if(dragId){e.preventDefault();autoScroll(e)}};
+ wrap.ondragleave=e=>{if(!wrap.contains(e.relatedTarget))stopDragScroll()};
+ for(const [rowIndex,p] of list.entries()){
   try {
   const tr=node('tr');
   const house=node('div','hh-house'),photos=node('div','hh-photo-grid');
@@ -153,13 +205,14 @@ function render(list){
   details.type='button';details.onclick=()=>openHouse(p);
   details.style.cssText='display:block;margin-top:6px;padding:5px 10px;font-size:12px;background:#fff;color:#315e50;border-color:#cbd7d1';
   const listingRow=node('div','hh-listing-row');listingRow.append(link);
-  house.append(photos,address,listingRow);
+  const positionLabel=node('span','hh-house-number','#'+(rowIndex+1));
+  house.append(positionLabel,photos,address,listingRow);
   if(canReorder?.()){
     const tools=node('div','hh-move-controls'),grip=node('button','hh-drag-handle','↕ Drag');
     grip.type='button';grip.draggable=true;grip.title='Drag to place above another house';
     grip.ondragstart=e=>{dragId=p.id;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',p.id);tr.classList.add('hh-dragging')};
-    grip.ondrag=e=>{if(dragId!==p.id||!e.clientY)return;const bounds=wrap.getBoundingClientRect();const margin=55;if(e.clientY<bounds.top+margin)wrap.scrollTop-=24;else if(e.clientY>bounds.bottom-margin)wrap.scrollTop+=24;};
-    grip.ondragend=()=>{dragId=null;tr.classList.remove('hh-dragging')};
+    grip.ondrag=e=>{if(dragId===p.id)autoScroll(e)};
+    grip.ondragend=()=>{stopDragScroll();dragId=null;tr.classList.remove('hh-dragging')};
     const up=node('button','hh-move-arrow','↑'),down=node('button','hh-move-arrow','↓');
     up.type='button';down.type='button';up.title='Move up one row';down.title='Move down one row';
     up.onclick=()=>void onReorder?.(p.id,p.id,-1);down.onclick=()=>void onReorder?.(p.id,p.id,1);
@@ -173,7 +226,7 @@ function render(list){
     tools.append(grip,up,down,position);listingRow.append(tools);
     tr.ondragover=e=>{if(dragId&&dragId!==p.id){e.preventDefault();tr.classList.add('hh-drop-target')}};
     tr.ondragleave=()=>tr.classList.remove('hh-drop-target');
-    tr.ondrop=e=>{e.preventDefault();tr.classList.remove('hh-drop-target');const source=dragId||e.dataTransfer.getData('text/plain');dragId=null;if(source&&source!==p.id)void onReorder?.(source,p.id)};
+    tr.ondrop=e=>{e.preventDefault();stopDragScroll();tr.classList.remove('hh-drop-target');const source=dragId||e.dataTransfer.getData('text/plain');dragId=null;if(source&&source!==p.id)void onReorder?.(source,p.id)};
   }
   if(p.status==='archived'){
     const restore=node('button','hh-restore-house','Restore to active');
