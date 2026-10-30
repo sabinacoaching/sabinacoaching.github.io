@@ -83,7 +83,7 @@ dialog.hh-photo-viewer[open]{display:flex;flex-direction:column}
 <script type="module">
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 import {setupComparison} from './comparison.js?v=33';
-import {analyzeFloorplan,inspectFloorplanImage} from './floorplan-ocr.js?v=12';
+import {analyzeFloorplan,inspectFloorplanImage} from './floorplan-ocr.js?v=13';
 const sb=createClient('https://ficnuovumurmhzdujjvj.supabase.co','sb_publishable_yrArzwZ2GizO5ATuiAkymg_LdpVZKC9');
 const $=id=>document.getElementById(id);
 const labels={saved:'Saved',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold'};
@@ -253,10 +253,10 @@ async function enrichProperty(p){
  const details={};
  p._floorplan_import={status:data.floorplan_status||'unknown',tabFound:!!data.floorplan_diagnostic?.tabFound,tabClicked:!!data.floorplan_diagnostic?.tabClicked,found:(data.floorplans||[]).length,archived:0,error:data.floorplan_diagnostic?.error||null};
  for(const key of ['bedrooms','floor_area_sqm','garden_description']){
-   if((p[key]==null||p[key]==='')&&data[key]!=null&&data[key]!=='')details[key]=data[key];
+   if(!p.manual_overrides?.[key]&&(p[key]==null||p[key]==='')&&data[key]!=null&&data[key]!=='')details[key]=data[key];
  }
  for(const [key,value] of [['bathrooms',listingBathrooms(data)],['floors',listingFloors(data)]]){
-  if((p[key]==null||p[key]==='')&&value!=null)details[key]=value;
+  if(!p.manual_overrides?.[key]&&(p[key]==null||p[key]==='')&&value!=null)details[key]=value;
  }
  // Prefer a plan from the ORIGINAL listing if a legacy record only has a secondary-site viewer link.
  const hasLegacyExternalViewer=(p.floorplans||[]).some(f=>/^https:\/\/www\.onthemarket\.com\//i.test(f.url||'')||/\/(?:otm-\d+-plan|source-archive-floorplan)/i.test(f.path||''));
@@ -509,7 +509,7 @@ $('refresh').onclick=async()=>{await refresh();if(!/Android|iPhone|iPad|iPod/i.t
 $('importForm').onsubmit=async e=>{e.preventDefault();$('importButton').disabled=true;try{await importHouse($('urlInput').value.trim());$('urlInput').value=''}catch(err){report(err.message,true)}finally{$('importButton').disabled=false}};
 for(const id of ['stageFilter','sort','search'])$(id).addEventListener(id==='search'?'input':'change',render);
 $('close').onclick=()=>$('dialog').close();
-$('save').onclick=async()=>{if(!selected||!enhancements.isEditing())return;const payload={address:$('editAddress').value.trim(),price:$('editPrice').value?Number($('editPrice').value):null,bedrooms:$('editBeds').value?Number($('editBeds').value):null,bathrooms:$('editBaths').value?Number($('editBaths').value):null,status:$('editStage').value,viewing_at:$('editViewing').value?new Date($('editViewing').value).toISOString():null,...enhancements.edited()};const r=await sb.from('properties').update(payload).eq('id',selected.id);if(r.error){alert(r.error.message);return}await refresh();alert('Saved')};
+$('save').onclick=async()=>{if(!selected||!enhancements.isEditing())return;const payload={address:$('editAddress').value.trim(),price:$('editPrice').value?Number($('editPrice').value):null,bedrooms:$('editBeds').value?Number($('editBeds').value):null,bathrooms:$('editBaths').value?Number($('editBaths').value):null,status:$('editStage').value,viewing_at:$('editViewing').value?new Date($('editViewing').value).toISOString():null,...enhancements.edited()};const overrides={...(selected.manual_overrides||{})};for(const [k,v] of Object.entries(payload)){if(String(selected[k]??'')!==String(v??''))overrides[k]=true;}payload.manual_overrides=overrides;const r=await sb.from('properties').update(payload).eq('id',selected.id);if(r.error){alert(r.error.message);return}selected.manual_overrides=overrides;await refresh();alert('Saved')};
 $('enrich').onclick=updateFromListing;
 $('remove').onclick=async()=>{if(!selected||!enhancements.isEditing()||!confirm('Remove this house and its comments?'))return;const r=await sb.from('properties').delete().eq('id',selected.id);if(r.error){alert(r.error.message);return}$('dialog').close();selected=null;await refresh()};
 $('noteForm').onsubmit=async e=>{e.preventDefault();if(!selected)return;const body=$('note').value.trim();if(!body)return;const r=await sb.from('notes').insert({property_id:selected.id,author_id:user.id,body});if(r.error){alert(r.error.message);return}$('note').value='';await loadNotes()};
