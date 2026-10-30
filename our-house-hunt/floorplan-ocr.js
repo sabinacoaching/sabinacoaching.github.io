@@ -145,17 +145,17 @@ export async function analyzeFloorplan({sb,property,photo}){
  if(planSignals<2)return {status:'unverified-floorplan-image'};
  const measurements=parsePlanText(ocrText),changes={};
  // Total floor area printed on the plan has priority over an approximate listing value.
- if(measurements.floor_area_sqm!=null&&Math.abs(Number(p.floor_area_sqm)-measurements.floor_area_sqm)>0.2)changes.floor_area_sqm=measurements.floor_area_sqm;
- if(p.floor_area_sqm==null&&measurements.floor_area_sqm!=null)changes.floor_area_sqm=measurements.floor_area_sqm;
- if(p.garden_area_sqm==null&&measurements.garden_area_sqm!=null)changes.garden_area_sqm=measurements.garden_area_sqm;
- if(p.floors==null&&measurements.floors!=null)changes.floors=measurements.floors;
+ if(!p.manual_overrides?.floor_area_sqm&&measurements.floor_area_sqm!=null&&Math.abs(Number(p.floor_area_sqm)-measurements.floor_area_sqm)>0.2)changes.floor_area_sqm=measurements.floor_area_sqm;
+ if(!p.manual_overrides?.floor_area_sqm&&p.floor_area_sqm==null&&measurements.floor_area_sqm!=null)changes.floor_area_sqm=measurements.floor_area_sqm;
+ if(!p.manual_overrides?.garden_area_sqm&&p.garden_area_sqm==null&&measurements.garden_area_sqm!=null)changes.garden_area_sqm=measurements.garden_area_sqm;
+ if(!p.manual_overrides?.floors&&p.floors==null&&measurements.floors!=null)changes.floors=measurements.floors;
  // Portal bathrooms count can include a separate WC; use labelled plan rooms only
  // when their total agrees with the total reported in the source, or the source did not give a count.
  const labelled=measurements.plan_bathrooms,standalone=measurements.plan_separate_wcs;
  const portalCount=p.bathrooms==null?null:Number(p.bathrooms);const existingTotal=portalCount==null?null:portalCount+(p.wc_count==null?0:Number(p.wc_count));
  if(labelled!=null&&(portalCount==null||labelled+standalone===portalCount||labelled+standalone===existingTotal)){
-   if(p.bathrooms!==labelled)changes.bathrooms=labelled;
-   if(p.wc_count!==standalone)changes.wc_count=standalone;
+   if(!p.manual_overrides?.bathrooms&&p.bathrooms!==labelled)changes.bathrooms=labelled;
+   if(!p.manual_overrides?.wc_count&&p.wc_count!==standalone)changes.wc_count=standalone;
  }
  // Cache only successful readable plans; failed extraction is retried at a later visit.
  if(Object.keys(measurements).length)try{localStorage.setItem(key,String(Date.now()))}catch{}
