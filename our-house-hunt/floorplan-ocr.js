@@ -66,6 +66,9 @@ export async function analyzeFloorplan({sb,property,photo}){
  const p=property;
  if(!p?.id||!(p.floorplans||[]).length)return {status:'not-needed'};
  const fingerprint=(p.floorplans||[])[0].path||(p.floorplans||[])[0].url;
+ // The user-supplied Zoopla/Rightmove listing is the only automatic source of factual measurements.
+ // Legacy cross-site plans remain viewable, but cannot silently overwrite property characteristics.
+ if(!/\/source-plan-\d+\.(?:jpg|jpeg|png|webp)$/i.test(fingerprint||''))return {status:'legacy-plan-not-from-original-listing'};
  const key='hh-plan-ocr-v6:'+p.id+':'+fingerprint;
  let last=0;try{last=Number(localStorage.getItem(key)||0)}catch{}
  if(last&&Date.now()-last<30*86400000)return {status:'already-checked'};
