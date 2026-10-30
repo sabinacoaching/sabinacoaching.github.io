@@ -9,6 +9,15 @@
 - Preservation checkpoint, made on 2026-10-30: branch `house-hunt-checkpoint-2026-10-30-v41`, exact commit `2561c2f2270dc89c2e8675fd479b54cab40534e8`. This records the deployed v41 source, **not independently browser-verified as working**.
 - In the incident on 2026-10-30, the site showed 21 properties, but Table was blank while Cards and Map were not the problem. Root cause: use of `entry.children.some(...)` on an HTMLCollection in `comparison.js`. Fixed to `entry.querySelector(...)` and a row-by-row error boundary was added. A count in the UI does not prove the table rendered.
 
+## Export and routine catalogue behaviour (new code published 2026-10-30)
+
+- `Export Excel` downloads a local, true `.xlsx` workbook without sending any export data to a third-party service. `Current table` contains visible, sorted/filtered rows; `Full data backup` contains ALL records from the loaded `properties` table, including archived/deleted, JSON metadata, comments and journey estimates. Photo and floor-plan paths are preserved, but the actual private Storage files are **not** embedded.
+- `Export PDF` opens a print-ready view of currently visible rows. In the browser print dialog, select `Save as PDF`. This is a browser-generated PDF, not an automatic server export.
+- Opening the catalogue, switching views and clicking Refresh **must remain read-only** for original listings, floor-plan OCR and transport route recalculation. Supabase database reads and signed photo URLs are still used to display the data; refresh polling every 30 seconds remains.
+- Automatic missing-detail enrichment and transport calculation should run only during the import session for a **new** property. Existing properties can be deliberately updated via the `Update listing data` button in the details dialog.
+- Version v41 remains the older checkpoint. A separate branch `house-hunt-before-export-2026-10-30` records the production state immediately before exports and read-only opening changes.
+- Export implementation: `our-house-hunt/export-tools.js`; attached by `our-house-hunt/index.html`. Table is still managed by `comparison.js`, with transport queue gates in `comparison.js` and `station-commutes.js`. Test Excel generation with Unicode and test the nonempty 13-column table after any changes.
+
 ## Emergency diagnosis, without destructive changes
 
 1. Read THIS document and the **live files and recent commits**, not a stale chat summary. Use the GitHub connector on the correct repo/folder. Check `our-house-hunt/index.html`, `comparison.js`, `comparison.css`, `station-commutes.js` and relevant imported modules.
