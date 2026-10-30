@@ -1,5 +1,5 @@
 import {setupStationAccess} from './station-commutes.js?v=16';
-export function setupComparison({sb,history,photo,openHouse,openPhotoBrowser,onReorder,canReorder,onStatusChange,shouldAutoCalculate}){
+export function setupComparison({sb,history,photo,openHouse,openPhotoBrowser,onReorder,canReorder,onStatusChange,shouldAutoCalculate,onRestore}){
 const stationAccess=setupStationAccess({sb,history,shouldAutoCalculate});
 const $=id=>document.getElementById(id),node=(tag,cls='',content)=>{const x=document.createElement(tag);x.className=cls;if(content!==undefined)x.textContent=content;return x};
 const statuses={'':'—',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold',archived:'Archive (hide)',deleted:'Delete (move to trash)'};
@@ -162,10 +162,23 @@ function render(list){
     const up=node('button','hh-move-arrow','↑'),down=node('button','hh-move-arrow','↓');
     up.type='button';down.type='button';up.title='Move up one row';down.title='Move down one row';
     up.onclick=()=>void onReorder?.(p.id,p.id,-1);down.onclick=()=>void onReorder?.(p.id,p.id,1);
-    tools.append(grip,up,down);listingRow.append(tools);
+    const position=node('select','hh-position-select');
+    position.setAttribute('aria-label','Move '+(p.address||'house')+' to position');
+    position.title='Move directly to any position in the active list';
+    const placeholder=node('option','','Move to…');placeholder.value='';position.append(placeholder);
+    for(let i=1;i<=list.length;i++){const opt=node('option','',String(i));opt.value=String(i);position.append(opt)}
+    position.value='';
+    position.onchange=()=>{const newPosition=Number(position.value);if(Number.isInteger(newPosition)&&newPosition>=1&&newPosition<=list.length)void onReorder?.(p.id,p.id,0,newPosition);position.value=''};
+    tools.append(grip,up,down,position);listingRow.append(tools);
     tr.ondragover=e=>{if(dragId&&dragId!==p.id){e.preventDefault();tr.classList.add('hh-drop-target')}};
     tr.ondragleave=()=>tr.classList.remove('hh-drop-target');
     tr.ondrop=e=>{e.preventDefault();tr.classList.remove('hh-drop-target');const source=dragId||e.dataTransfer.getData('text/plain');dragId=null;if(source&&source!==p.id)void onReorder?.(source,p.id)};
+  }
+  if(p.status==='archived'){
+    const restore=node('button','hh-restore-house','Restore to active');
+    restore.type='button';
+    restore.onclick=async()=>{restore.disabled=true;try{await onRestore?.(p)}finally{restore.disabled=false}};
+    listingRow.append(restore);
   }
   house.append(details);
   tr.append(cell(house));
