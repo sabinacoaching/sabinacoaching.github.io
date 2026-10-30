@@ -31,9 +31,25 @@ export function createEditHistory({sb,onRestored}){
   stack.push({id:p.id,address:p.address||'',before,after,at:new Date().toISOString()});
   stack=stack.slice(-20);persist();return {error:null};
  }
+ function recordOrder(before,after){
+  if(JSON.stringify(before)===JSON.stringify(after))return;
+  stack.push({kind:'reorder',before,after,at:new Date().toISOString()});
+  stack=stack.slice(-20);persist();
+ }
  async function undo(){
   if(!stack.length)return {error:new Error('No edit to undo')};
-  const last=stack.at(-1),r=await sb.from('properties').select('*').eq('id',last.id).single();
+  const last=stack.at(-1);
+  if(last.kind==='reorder'){
+   const r=await sb.from('properties').select('id,sort_order').in('id',last.after);
+   if(r.error)return r;
+   const current=(r.data||[]).sort((a,b)=>Number(a.sort_order)-Number(b.sort_order)).map(x=>x.id);
+   if(JSON.stringify(current)!==JSON.stringify(last.after))
+    return {error:new Error('Another user has rearranged the houses. Undo did not overwrite that order.')};
+   const saved=await sb.rpc('house_hunt_reorder',{house_ids:last.before});
+   if(saved.error)return saved;
+   stack.pop();persist();await onRestored?.(last);return {error:null,entry:last};
+  }
+  const r=await sb.from('properties').select('*').eq('id',last.id).single();
   if(r.error)return r;
   for(const [k,v] of Object.entries(last.after))if(!eq(r.data?.[k],v))
    return {error:new Error('This value was changed again. Undo stopped to protect the newer edit.')};
@@ -41,5 +57,5 @@ export function createEditHistory({sb,onRestored}){
   if(result.error)return result;
   stack.pop();persist();await onRestored?.(last);return {error:null,entry:last};
  }
- return {save,undo,subscribe(fn){watchers.add(fn);fn(stack.length);return()=>watchers.delete(fn)},canUndo:()=>stack.length>0};
+ return {save,undo,recordOrder,subscribe(fn){watchers.add(fn);fn(stack.length);return()=>watchers.delete(fn)},canUndo:()=>stack.length>0};
 }
