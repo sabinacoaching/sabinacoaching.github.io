@@ -298,7 +298,7 @@ async function enrichProperty(p){
   if(!p.manual_overrides?.[key]&&(p[key]==null||p[key]==='')&&value!=null)details[key]=value;
  }
  // Prefer a plan from the ORIGINAL listing if a legacy record only has a secondary-site viewer link.
- const hasLegacyExternalViewer=(p.floorplans||[]).some(f=>/^https:\/\/www\.onthemarket\.com\//i.test(f.url||'')||/\/(?:otm-\d+-plan|source-archive-floorplan)/i.test(f.path||''));
+ const hasLegacyExternalViewer=(p.floorplans||[]).some(f=>/^https:\/\/www\.onthemarket\.com\//i.test(f.url||'')||/\/(?:otm-\d+-plan|source-archive-floorplan|agent-original-|[\w-]+-original-agent-floorplan)/i.test(f.path||''));
  if(((!p.floorplans||!p.floorplans.length)||hasLegacyExternalViewer)&&(data.floorplans||[]).length){
    const checks=[];
    const plans=await archive(data.floorplans||[],p.id,'source-plan',5,checks);
@@ -409,31 +409,38 @@ async function enrichWalkingStations(p){
  Object.assign(p,update);return true;
 }
 
+// Existing catalogue files from other portals are retained until the original
+// Zoopla/Rightmove import supplies a verified replacement. Never lose a valid plan.
+let autoFillRunning=false,legacyRetryTimer=null;
+const usesLegacyPlan=p=>(p.floorplans||[]).some(f=>/\/(?:otm-\d+-plan|agent-original-|[\w-]+-original-agent-floorplan|source-archive-floorplan)/i.test(f.path||'')||/^https:\/\/www\.onthemarket\.com\//i.test(f.url||''));
 async function autoFillMissing(){
- if(!homes.length)return;
- // Source re-reading is expensive; location/transport enrichment runs independently below.
- const nelsonId='70414489-c568-4aee-9c79-09e58b7a8e2d';
- const pending=homes.filter(p=>!p.floorplans?.length||p.floor_area_sqm==null||p.bathrooms==null||p.floors==null)
-   .sort((a,b)=>Number(b.id===nelsonId)-Number(a.id===nelsonId));
- let checked=0,changedTotal=0;const unresolved=[];
- for(const p of pending){
-  const key='hh-details-v10-'+p.id;
-  // Never suppress the Nelson Road retry when an extension was updated in an open tab.
-  // Older code marked the attempt complete before knowing if it found a plan.
-  if(p.floorplans?.length&&p.id!==nelsonId&&sessionStorage.getItem(key)==='attempted')continue;
-  if(checked>=3)break; // Avoid bulk rate-limited re-imports on every page load.
-  // Never cache a failure to obtain a floorplan. Refresh must retry missing plans.
-  if(p.floorplans?.length&&p.id!==nelsonId)sessionStorage.setItem(key,'attempted');
-  report('Checking missing listing details for '+p.address+'…');
-  try{
-   const changed=await enrichProperty(p);
-   changedTotal+=changed.length;
-   if(!p.floorplans?.length){const info=p._floorplan_import;const checks=(info?.checks||[]).map(x=>x.status+(x.error?': '+x.error:x.validation?.reason?': '+x.validation.reason:'')).join(', ');unresolved.push(p.address+': '+(checks||info?.status||'plan not extracted'));}
-   ++checked;
-   await refresh();
-  }catch(e){++checked;unresolved.push(p.address+': '+(e.message||String(e)));console.warn('Auto-fill failed for '+p.url,e)}
+ if(autoFillRunning||!homes.length)return;
+ autoFillRunning=true;
+ try{
+  const pending=homes.filter(p=>!p.floorplans?.length||p.floor_area_sqm==null||p.bathrooms==null||p.floors==null||usesLegacyPlan(p))
+   .sort((a,b)=>Number(!b.floorplans?.length)-Number(!a.floorplans?.length)||Number(/pauls? close/i.test(b.address))-Number(/pauls? close/i.test(a.address)));
+  let checked=0,changedTotal=0;const unresolved=[];
+  for(const p of pending){
+   const key='hh-details-v11-'+p.id;
+   if(sessionStorage.getItem(key)==='attempted')continue;
+   if(checked>=3)break;
+   // Prevent repeated browser tabs for the same listing in one user session.
+   sessionStorage.setItem(key,'attempted');
+   report('Checking the original listing for '+p.address+'…');
+   try{
+    const changed=await enrichProperty(p);
+    changedTotal+=changed.length;
+    if(!p.floorplans?.length)unresolved.push(p.address+': '+(p._floorplan_import?.status||'plan not located'));
+    ++checked;await refresh();
+   }catch(e){++checked;unresolved.push(p.address+': '+String(e.message||e));console.warn('Source import failed',p.url,e)}
+  }
+  if(checked)report('Original listing checks: '+checked+' houses'+(changedTotal?', '+changedTotal+' fields updated':'')+(unresolved.length?'; '+unresolved.join('; '):'')+'.',!!unresolved.length);
+ }finally{
+  autoFillRunning=false;
+  // Continue legacy plan migration autonomously while the catalogue tab is open.
+  const more=homes.some(p=>usesLegacyPlan(p)&&sessionStorage.getItem('hh-details-v11-'+p.id)!=='attempted');
+  if(more&&!legacyRetryTimer)legacyRetryTimer=setTimeout(()=>{legacyRetryTimer=null;void autoFillMissing()},15000);
  }
- if(checked)report('Checked '+checked+' incomplete listings. '+(changedTotal?'Added '+changedTotal+' missing fields. ':'')+(unresolved.length?'Floor plans not extracted: '+unresolved.join('; ')+'. ':'')+'Further checks run when the catalogue is opened again.',!!unresolved.length);
 }
 async function fillGeoMissing(){
  const pending=homes.filter(p=>p.latitude==null||p.longitude==null||!p.station_name||p.station_distance_miles==null||!p.station_2_name||p.station_2_distance_miles==null);
