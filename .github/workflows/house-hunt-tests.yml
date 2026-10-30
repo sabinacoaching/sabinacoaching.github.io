@@ -1,0 +1,21 @@
+name: House Hunt tests
+on:
+  push:
+    paths:
+      - 'our-house-hunt/**'
+      - '.github/workflows/house-hunt-tests.yml'
+  pull_request:
+    paths:
+      - 'our-house-hunt/**'
+      - '.github/workflows/house-hunt-tests.yml'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run House Hunt regression tests
+        working-directory: our-house-hunt
+        run: npm test
