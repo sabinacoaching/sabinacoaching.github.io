@@ -8,17 +8,18 @@ const extras=[['wc_count','Separate WC','number'],['floors','Floors','number'],[
 const nums=new Set(['bedrooms','bathrooms','wc_count','floors','floor_area_sqm','garden_area_sqm','station_distance_miles','station_2_distance_miles']);
 const money=p=>p==null?'—':new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP',maximumFractionDigits:0}).format(p);
 const clean=x=>String(x||'House').replace(/^\s*\d+\s*bed(?:room)?s?\s+.*?\s+(?:for sale|to rent)\s*/i,'').replace(/^\s*property\s+for\s+sale\s*/i,'').replace(/\s*[-|]\s*zoopla.*$/i,'').replace(/\s*[-|]\s*rightmove.*$/i,'').replace(/,\s*(?:[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}|[A-Z]{1,2}\d[A-Z\d]?)$/i,'').replace(/\s+(?:[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}|[A-Z]{1,2}\d[A-Z\d]?)$/i,'').trim();
-const bar=node('div','hh-views'),tableBtn=node('button','active','Table'),mapBtn=node('button','','Map'),cardsBtn=node('button','','Cards'),notice=node('span','hh-notice','Changes save for both of you.');
-bar.append(tableBtn,mapBtn,cardsBtn,notice);
+const bar=node('div','hh-views'),tableBtn=node('button','active','Table'),mapBtn=node('button','','Map'),cardsBtn=node('button','','Cards'),editBtn=node('button','hh-edit-switch','Edit mode: OFF'),notice=node('span','hh-notice','Read-only until Edit mode is enabled.');
+bar.append(tableBtn,mapBtn,cardsBtn,editBtn,notice);
 const wrap=node('section','hh-table-shell'),table=node('table','hh-table'),mapPanel=node('section'),mapMsg=node('p','hh-mapmsg','Map shows approximate positions when coordinates are available.'),mapDiv=node('div','hh-map'),missingDiv=node('div','hh-maplist');
 wrap.append(table);mapPanel.append(mapMsg,mapDiv,missingDiv);mapPanel.hidden=true;$('cards').before(bar,wrap,mapPanel);
-let rows=[],mode='table',L=null,map=null,markers=null,mapFramed=false,lastMapSig='';
+let rows=[],mode='table',editing=false,L=null,map=null,markers=null,mapFramed=false,lastMapSig='';
+ editBtn.onclick=()=>{editing=!editing;editBtn.textContent=editing?'Edit mode: ON (Lock)':'Edit mode: OFF';editBtn.classList.toggle('active',editing);wrap.classList.toggle('hh-edit-on',editing);notice.textContent=editing?'Editing enabled. Changes save automatically.':'Read-only until Edit mode is enabled.';render(rows)};
 function flash(msg,fail=false){notice.textContent=msg;notice.style.color=fail?'#af4b45':'#315e50';setTimeout(()=>{notice.textContent='Changes save for both of you.';notice.style.color=''},3000)}
 function selectMode(which){mode=which;tableBtn.classList.toggle('active',which==='table');mapBtn.classList.toggle('active',which==='map');cardsBtn.classList.toggle('active',which==='cards');wrap.hidden=which!=='table';mapPanel.hidden=which!=='map';$('cards').style.display=which==='cards'?'':'none';$('empty').hidden=which!=='cards'||!!rows.length;if(which==='map')showMap().catch(e=>{console.error('Property map',e);mapMsg.textContent='Map could not be loaded: '+e.message+' Select Table and then Map to retry.'})}
 tableBtn.onclick=()=>selectMode('table');mapBtn.onclick=()=>selectMode('map');cardsBtn.onclick=()=>selectMode('cards');selectMode('table');
 function cast(k,v){return nums.has(k)?(v===''?null:Number(v)):v}
-async function save(p,key,value,input){const val=cast(key,value);if(nums.has(key)&&val!==null&&!Number.isFinite(val)){flash('Invalid number',true);return}if(String(p[key]??'')===String(val??''))return;const r=await sb.from('properties').update({[key]:val}).eq('id',p.id).select(key).single();if(r.error){flash(r.error.message,true);input?.classList.add('hh-savefail');return}p[key]=val;input?.classList.remove('hh-savefail');flash('Saved')}
-function editor(p,key,type='text'){let x=node(type==='textarea'?'textarea':type==='select'?'select':'input');if(type==='select'){for(const [v,label] of Object.entries(statuses)){const opt=node('option','',label);opt.value=v;x.append(opt)}x.value=p[key]||'saved'}else{if(type==='number'){x.type='number';x.step='any';x.min='0'}if(type==='textarea')x.rows=6;x.value=p[key]??''}x.setAttribute('aria-label',key+' '+p.address);let tid;if(type==='textarea'){const minimum=(key==='comment_sabina'||key==='comment_david')?230:86;const resize=()=>{x.style.height='auto';x.style.height=Math.max(minimum,x.scrollHeight+8)+'px'};x.style.resize='none';x.style.overflowY='hidden';resize();x.addEventListener('input',()=>{resize();clearTimeout(tid);tid=setTimeout(()=>save(p,key,x.value,x),800)});x.addEventListener('blur',()=>{clearTimeout(tid);save(p,key,x.value,x)})}else x.addEventListener('change',()=>save(p,key,x.value,x));return x}
+async function save(p,key,value,input){if(!editing)return;const val=cast(key,value);if(nums.has(key)&&val!==null&&!Number.isFinite(val)){flash('Invalid number',true);return}if(String(p[key]??'')===String(val??''))return;const r=await sb.from('properties').update({[key]:val}).eq('id',p.id).select(key).single();if(r.error){flash(r.error.message,true);input?.classList.add('hh-savefail');return}p[key]=val;input?.classList.remove('hh-savefail');flash('Saved')}
+function editor(p,key,type='text'){let x=node(type==='textarea'?'textarea':type==='select'?'select':'input');if(type==='select'){for(const [v,label] of Object.entries(statuses)){const opt=node('option','',label);opt.value=v;x.append(opt)}x.value=p[key]||'saved'}else{if(type==='number'){x.type='number';x.step='any';x.min='0'}if(type==='textarea')x.rows=6;x.value=p[key]??''}x.setAttribute('aria-label',key+' '+p.address);if(type==='select')x.disabled=!editing;else x.readOnly=!editing;let tid;if(type==='textarea'){const minimum=(key==='comment_sabina'||key==='comment_david')?230:86;const resize=()=>{x.style.height='auto';x.style.height=Math.max(minimum,x.scrollHeight+8)+'px'};x.style.resize='none';x.style.overflowY='hidden';resize();x.addEventListener('input',()=>{resize();clearTimeout(tid);tid=setTimeout(()=>save(p,key,x.value,x),800)});x.addEventListener('blur',()=>{clearTimeout(tid);save(p,key,x.value,x)})}else x.addEventListener('change',()=>save(p,key,x.value,x));return x}
 const cell=value=>{const t=node('td');if(value instanceof Node)t.append(value);else t.textContent=value;return t};
 const val=v=>v==null||v===''?'—':String(v);
 
@@ -112,7 +113,7 @@ function render(list){
   const house=node('div','hh-house'),photos=node('div','hh-photo-grid');
   distinctPhotos(p,photos).catch(e=>console.warn('Photo gallery',e));
   const address=node('div','hh-address',clean(p.address||p.title));
-  address.contentEditable='true';address.setAttribute('role','textbox');address.setAttribute('aria-label','Property address, editable');
+  address.contentEditable=editing?'true':'false';address.setAttribute('role','textbox');address.setAttribute('aria-label','Property address, editable');
   address.spellcheck=false;address.title='Edit property address';
   address.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();address.blur()}});
   address.addEventListener('blur',()=>save(p,'address',address.textContent.trim(),address));
@@ -151,7 +152,7 @@ function render(list){
   tr.append(cell(editor(p,'comment_sabina','textarea')));
   tr.append(cell(editor(p,'comment_david','textarea')));
   tr.append(cell(editor(p,'status','select')));
-  const view=node('input');view.type='datetime-local';view.value=p.viewing_at?p.viewing_at.slice(0,16):'';view.setAttribute('aria-label','Viewing date '+(p.address||p.title));view.onchange=async()=>{const v=view.value?new Date(view.value).toISOString():null;const r=await sb.from('properties').update({viewing_at:v}).eq('id',p.id);if(r.error)flash(r.error.message,true);else{p.viewing_at=v;flash('Saved')}};tr.append(cell(view));
+  const view=node('input');view.type='datetime-local';view.value=p.viewing_at?p.viewing_at.slice(0,16):'';view.setAttribute('aria-label','Viewing date '+(p.address||p.title));view.disabled=!editing;view.onchange=async()=>{if(!editing)return;const v=view.value?new Date(view.value).toISOString():null;const r=await sb.from('properties').update({viewing_at:v}).eq('id',p.id);if(r.error)flash(r.error.message,true);else{p.viewing_at=v;flash('Saved')}};tr.append(cell(view));
   if(tr.cells.length!==labels.length)throw Error('Comparison column count mismatch');
   body.append(tr);
  }
