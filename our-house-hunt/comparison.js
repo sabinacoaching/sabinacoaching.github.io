@@ -146,6 +146,12 @@ function render(list){
    const options=node('div','hh-status-filter-options');
    const checks=new Map();
    const selectedNow=new Set(getStatusSelection?.()||Object.keys(statuses).filter(s=>s!=='archived'&&s!=='deleted'));
+   const selectedLabels=[...selectedNow];
+   const normal=Object.keys(statuses).filter(s=>s!=='archived'&&s!=='deleted');
+   if(!(selectedLabels.length===normal.length&&normal.every(x=>selectedNow.has(x)))){
+    trigger.textContent=selectedLabels.length===1?'▾ '+(selectedLabels[0]===''?'No status':(statuses[selectedLabels[0]]||selectedLabels[0]).replace(/ \(.*\)$/,'')):'▾ '+selectedLabels.length+' selected';
+    trigger.classList.add('hh-status-filter-applied');
+   }
    for(const [status,label] of Object.entries(statuses)){
     const option=node('label','hh-status-filter-option');
     const input=node('input');input.type='checkbox';input.value=status;input.checked=selectedNow.has(status);
