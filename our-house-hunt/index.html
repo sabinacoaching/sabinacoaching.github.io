@@ -135,14 +135,19 @@ async function importHouse(raw){
  const id=crypto.randomUUID();
  const images=await archive(data.images,id,'photo',24);
  if(!images.length)throw Error('Photographs could not be downloaded. House not added.');
+ // The importer may return an ordinary photograph as a floor plan; downstream OCR validates content.
  const floorplans=await archive(data.floorplans||[],id,'floorplan',5);
  const p={id,url,source:data.source,title:data.title||'',address:data.address||'',price:data.price||null,bedrooms:data.bedrooms??null,bathrooms:data.bathrooms??null,wc_count:data.wc_count??null,floors:data.floors??null,floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:data.garden_area_sqm??null,garden_description:data.garden_description||'',station_name:data.station_name||'',station_distance_miles:data.station_distance_miles??null,station_2_name:data.station_2_name||'',station_2_distance_miles:data.station_2_distance_miles??null,latitude:data.latitude??null,longitude:data.longitude??null,property_type:data.property_type||null,tenure:data.tenure||null,images,floorplans,created_by:user.id,status:'saved'};
  const r=await sb.from('properties').insert(p);
  if(r.error)throw r.error;
- report('House added with '+images.length+' photographs. Available listing details were imported.');
+ report('House saved with '+images.length+' photographs. Completing location, stations and floor plan…');
  await refresh();
- enrichWalkingStations(p).then(changed=>{if(changed)refresh()}).catch(e=>console.warn('Walking stations not available',e));
- analyzeFloorplan({sb,property:p,photo}).then(o=>{if(o.status==='saved')refresh()}).catch(e=>console.warn('Automatic floor plan reading unavailable',e));
+ const failures=[];
+ try { await enrichWalkingStations(p); } catch(e) { failures.push('location/stations'); console.warn('Walking stations not available',e); }
+ try { await analyzeFloorplan({sb,property:p,photo}); } catch(e) { failures.push('floor plan'); console.warn('Automatic floor plan reading unavailable',e); }
+ await refresh(); // Re-render to trigger public-transport journey estimates once coordinates have been saved.
+ const missing=[p.latitude==null?'map point':null,!p.station_name?'stations':null,p.bathrooms==null?'bathrooms':null,p.floors==null?'floors':null,p.floor_area_sqm==null?'floor area':null,!p.floorplans?.length?'floor plan':null].filter(Boolean);
+ report(missing.length?'House saved. Still missing: '+missing.join(', ')+'. Automatic checks will retry on the next visit.':'House imported with location, stations and essential details. Journey times are being calculated.',!!failures.length);
 }
 async function enrichProperty(p){
  const data=await extension('IMPORT_URL',{url:p.url},70000);
@@ -186,6 +191,12 @@ async function enrichWalkingStations(p){
    const coordinate=addresses?.[0];
    if(!coordinate)return false;
    lat=Number(coordinate.lat);lon=Number(coordinate.lon);
+   if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<49||lat>61||lon< -9||lon>3)return false;
+   // Persist the map point *before* querying stations: a routing failure must not discard a successful geocode.
+   const loc=await sb.from('properties').update({latitude:lat,longitude:lon}).eq('id',p.id).select('id').single();
+   if(loc.error)throw loc.error;
+   p.latitude=lat;p.longitude=lon;
+   await refresh();
    await routeDelay(1100);
  }
  // Standard Overpass QL railway tags quoted to avoid interpreting arbitrary user content as a query.
@@ -237,17 +248,36 @@ async function enrichWalkingStations(p){
 
 async function autoFillMissing(){
  if(!homes.length)return;
- const pending=homes.filter(p=>(!p.floorplans?.length||p.floor_area_sqm==null||!p.station_name||p.bathrooms==null||!p.garden_description||p.floors==null));
- let changedTotal=0,checked=0;
+ // Source re-reading is expensive; location/transport enrichment runs independently below.
+ const pending=homes.filter(p=>!p.floorplans?.length||p.floor_area_sqm==null||p.bathrooms==null||p.floors==null||!p.garden_description);
+ let checked=0,changedTotal=0;
  for(const p of pending){
-   const key='hh-details-v04-'+p.id;
-   if(sessionStorage.getItem(key)==='done')continue;
-   report('Checking available details for '+(++checked)+' property'+(checked>1?'ies':'')+'…');
-   try{const changed=await enrichProperty(p);changedTotal+=changed.length;try{if(await enrichWalkingStations(p))changedTotal+=2}catch(e){console.warn('Walking stations not available',e)}sessionStorage.setItem(key,'done')}
-   catch(e){console.warn('Auto-fill failed for '+p.url,e)}
+  const key='hh-details-v05-'+p.id;
+  if(sessionStorage.getItem(key)==='attempted')continue;
+  if(checked>=3)break; // Avoid bulk rate-limited re-imports on every page load.
+  sessionStorage.setItem(key,'attempted');
+  report('Checking missing listing details for '+p.address+'…');
+  try{
+   const changed=await enrichProperty(p);
+   changedTotal+=changed.length;
+   ++checked;
    await refresh();
+  }catch(e){++checked;console.warn('Auto-fill failed for '+p.url,e)}
  }
- if(checked)report('Checked '+checked+' existing properties. '+(changedTotal?'Imported '+changedTotal+' additional fields. ':'')+'Details absent from the source remain empty.');
+ if(checked)report('Checked '+checked+' incomplete listings. '+(changedTotal?'Added '+changedTotal+' missing fields. ':'')+'Further checks run when the catalogue is opened again.');
+}
+async function fillGeoMissing(){
+ const pending=homes.filter(p=>p.latitude==null||p.longitude==null||!p.station_name||p.station_distance_miles==null||!p.station_2_name||p.station_2_distance_miles==null);
+ let checked=0;
+ for(const p of pending){
+  if(checked>=3)break;
+  const key='hh-geo-v02-'+p.id;
+  if(sessionStorage.getItem(key))continue;
+  sessionStorage.setItem(key,'attempted');
+  ++checked;
+  try { if(await enrichWalkingStations(p))await refresh(); }
+  catch(e){console.warn('Automatic location or station enrichment unavailable for '+p.address,e)}
+ }
 }
 async function fillPlanMeasurements(){
  const pending=homes.filter(p=>p.floorplans?.length&&(p.floor_area_sqm==null||p.garden_area_sqm==null));
@@ -262,13 +292,13 @@ async function fillPlanMeasurements(){
 }
 async function startAutoFill(){
  if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){
-  report('Catalogue works on mobile. Import and automatic floor plan reading are available in desktop Chrome.');
-  return
+  report('Catalogue works on mobile. Chrome is required only for importing new listings.');
  }
- try{
-  if(await probeImporter())await autoFillMissing();
-  await fillPlanMeasurements();
- }catch(e){console.warn('Automatic enrichment unavailable',e)}
+ try{await fillGeoMissing()}catch(e){console.warn('Location enrichment unavailable',e)}
+ if(!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){
+  try{if(await probeImporter())await autoFillMissing()}catch(e){console.warn('Listing source enrichment unavailable',e)}
+  try{await fillPlanMeasurements()}catch(e){console.warn('Floor plan OCR unavailable',e)}
+ }
 }
 async function refresh(){const r=await sb.from('properties').select('*').order('created_at',{ascending:false});if(r.error){report('Cannot load houses: '+r.error.message,true);return}homes=r.data||[];render();if(selected){const p=homes.find(x=>x.id===selected.id);if(p){selected=p;await loadNotes()}}}
 function render(){let rows=homes.filter(p=>($('stageFilter').value==='all'||p.status===$('stageFilter').value)&&(!$('search').value.trim()||(p.address+' '+p.title).toLowerCase().includes($('search').value.trim().toLowerCase())));if($('sort').value==='price_asc')rows.sort((a,b)=>(a.price??Infinity)-(b.price??Infinity));if($('sort').value==='price_desc')rows.sort((a,b)=>(b.price??0)-(a.price??0));
