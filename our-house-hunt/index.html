@@ -136,7 +136,8 @@ async function importHouse(raw){
  const images=await archive(data.images,id,'photo',24);
  if(!images.length)throw Error('Photographs could not be downloaded. House not added.');
  // The importer may return an ordinary photograph as a floor plan; downstream OCR validates content.
- const floorplans=await archive(data.floorplans||[],id,'floorplan',5);
+ const floorplanCandidates=(data.floorplans||[]).filter(u=>!(data.images||[]).includes(u));
+ const floorplans=await archive(floorplanCandidates,id,'floorplan',5);
  const p={id,url,source:data.source,title:data.title||'',address:data.address||'',price:data.price||null,bedrooms:data.bedrooms??null,bathrooms:data.bathrooms??null,wc_count:data.wc_count??null,floors:data.floors??null,floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:data.garden_area_sqm??null,garden_description:data.garden_description||'',station_name:data.station_name||'',station_distance_miles:data.station_distance_miles??null,station_2_name:data.station_2_name||'',station_2_distance_miles:data.station_2_distance_miles??null,latitude:data.latitude??null,longitude:data.longitude??null,property_type:data.property_type||null,tenure:data.tenure||null,images,floorplans,created_by:user.id,status:'saved'};
  const r=await sb.from('properties').insert(p);
  if(r.error)throw r.error;
@@ -156,7 +157,7 @@ async function enrichProperty(p){
    if((p[key]==null||p[key]==='')&&data[key]!=null&&data[key]!=='')details[key]=data[key];
  }
  if((!p.floorplans||!p.floorplans.length)&&(data.floorplans||[]).length){
-   const plans=await archive(data.floorplans,p.id,'floorplan',5);
+   const plans=await archive((data.floorplans||[]).filter(u=>!(data.images||[]).includes(u)),p.id,'floorplan',5);
    if(plans.length)details.floorplans=plans;
  }
  if(Object.keys(details).length){
@@ -186,7 +187,7 @@ async function enrichWalkingStations(p){
    if(query.length<8)return false;
    // Nominatim frequently returns no result when a street name is combined with only an outcode (e.g. TW2).
    // Retry the same street without the incomplete postcode; never substitute a postcode-area centroid.
-   const withoutOutcode=query.replace(/\s+[A-Z]{1,2}\d[A-Z\d]?(?:\s+\d[A-Z]{2})?\s*$/i,'').trim();
+   const withoutOutcode=query.replace(/\s+[A-Z]{1,2}\d[A-Z\d]?(?:\s+\d[A-Z]{2})?\s*$/i,'').replace(/,\s*$/,'').trim();
    const candidates=[query,...(withoutOutcode!==query?[withoutOutcode]:[])];
    let coordinate=null,lastGeoError=null;
    for(const candidate of candidates){
