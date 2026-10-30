@@ -1,6 +1,6 @@
 import {setupStationAccess} from './station-commutes.js?v=13';
-export function setupComparison({sb,photo,openHouse,openPhotoBrowser}){
-const stationAccess=setupStationAccess({sb});
+export function setupComparison({sb,history,photo,openHouse,openPhotoBrowser}){
+const stationAccess=setupStationAccess({sb,history});
 const $=id=>document.getElementById(id),node=(tag,cls='',content)=>{const x=document.createElement(tag);x.className=cls;if(content!==undefined)x.textContent=content;return x};
 const statuses={saved:'Saved',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold'};
 const labels=['House','Price','Bedrooms','Bathrooms / WC','Floors','Total floor area','Garden','Nearest station','Journey times','Sabina comments','David comments','Viewing status','Viewing date'];
@@ -8,18 +8,27 @@ const extras=[['title','Listing title','text'],['url','Original listing URL','te
 const nums=new Set(['latitude','longitude','bedrooms','bathrooms','wc_count','floors','floor_area_sqm','garden_area_sqm','station_distance_miles','station_2_distance_miles']);
 const money=p=>p==null?'—':new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP',maximumFractionDigits:0}).format(p);
 const clean=x=>String(x||'House').replace(/^\s*\d+\s*bed(?:room)?s?\s+.*?\s+(?:for sale|to rent)\s*/i,'').replace(/^\s*property\s+for\s+sale\s*/i,'').replace(/\s*[-|]\s*zoopla.*$/i,'').replace(/\s*[-|]\s*rightmove.*$/i,'').replace(/,\s*(?:[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}|[A-Z]{1,2}\d[A-Z\d]?)$/i,'').replace(/\s+(?:[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}|[A-Z]{1,2}\d[A-Z\d]?)$/i,'').trim();
-const bar=node('div','hh-views'),tableBtn=node('button','active','Table'),mapBtn=node('button','','Map'),cardsBtn=node('button','','Cards'),editBtn=node('button','hh-edit-switch','Edit mode: OFF'),notice=node('span','hh-notice','Read-only until Edit mode is enabled.');
-bar.append(tableBtn,mapBtn,cardsBtn,editBtn,notice);
+const bar=node('div','hh-views'),tableBtn=node('button','active','Table'),mapBtn=node('button','','Map'),cardsBtn=node('button','','Cards'),undoBtn=node('button','hh-undo','Undo last edit'),notice=node('span','hh-notice','Changes save automatically.');
+bar.append(tableBtn,mapBtn,cardsBtn,undoBtn,notice);
 const wrap=node('section','hh-table-shell'),table=node('table','hh-table'),mapPanel=node('section'),mapMsg=node('p','hh-mapmsg','Map shows approximate positions when coordinates are available.'),mapDiv=node('div','hh-map'),missingDiv=node('div','hh-maplist');
 wrap.append(table);mapPanel.append(mapMsg,mapDiv,missingDiv);mapPanel.hidden=true;$('cards').before(bar,wrap,mapPanel);
-let rows=[],mode='table',editing=false,L=null,map=null,markers=null,mapFramed=false,lastMapSig='';
- editBtn.onclick=()=>{editing=!editing;editBtn.textContent=editing?'Edit mode: ON (Lock)':'Edit mode: OFF';editBtn.classList.toggle('active',editing);wrap.classList.toggle('hh-edit-on',editing);notice.textContent=editing?'Editing enabled. Changes save automatically.':'Read-only until Edit mode is enabled.';render(rows)};
+let rows=[],mode='table',L=null,map=null,markers=null,mapFramed=false,lastMapSig='';
+ history.subscribe(n=>{undoBtn.disabled=n===0;undoBtn.title=n?n+' manual changes can be undone':'No manual changes to undo'});
+ undoBtn.onclick=async()=>{undoBtn.disabled=true;const r=await history.undo();if(r.error)flash(r.error.message,true);else flash('Last change undone');undoBtn.disabled=!history.canUndo()};
 function flash(msg,fail=false){notice.textContent=msg;notice.style.color=fail?'#af4b45':'#315e50';setTimeout(()=>{notice.textContent='Changes save for both of you.';notice.style.color=''},3000)}
 function selectMode(which){mode=which;tableBtn.classList.toggle('active',which==='table');mapBtn.classList.toggle('active',which==='map');cardsBtn.classList.toggle('active',which==='cards');wrap.hidden=which!=='table';mapPanel.hidden=which!=='map';$('cards').style.display=which==='cards'?'':'none';$('empty').hidden=which!=='cards'||!!rows.length;if(which==='map')showMap().catch(e=>{console.error('Property map',e);mapMsg.textContent='Map could not be loaded: '+e.message+' Select Table and then Map to retry.'})}
 tableBtn.onclick=()=>selectMode('table');mapBtn.onclick=()=>selectMode('map');cardsBtn.onclick=()=>selectMode('cards');selectMode('table');
 function cast(k,v){return nums.has(k)?(v===''?null:Number(v)):v}
-async function save(p,key,value,input){if(!editing)return;const val=cast(key,value);if(nums.has(key)&&val!==null&&!Number.isFinite(val)){flash('Invalid number',true);return}if(String(p[key]??'')===String(val??''))return;const manual_overrides={...(p.manual_overrides||{}),[key]:true};const r=await sb.from('properties').update({[key]:val,manual_overrides}).eq('id',p.id).select(key).single();if(r.error){flash(r.error.message,true);input?.classList.add('hh-savefail');return}p[key]=val;p.manual_overrides=manual_overrides;input?.classList.remove('hh-savefail');flash('Saved')}
-function editor(p,key,type='text'){let x=node(type==='textarea'?'textarea':type==='select'?'select':'input');if(type==='select'){for(const [v,label] of Object.entries(statuses)){const opt=node('option','',label);opt.value=v;x.append(opt)}x.value=p[key]||'saved'}else{if(type==='number'){x.type='number';x.step='any';x.min='0'}if(type==='textarea')x.rows=6;x.value=p[key]??''}x.setAttribute('aria-label',key+' '+p.address);if(type==='select')x.disabled=!editing;else x.readOnly=!editing;let tid;if(type==='textarea'){const minimum=(key==='comment_sabina'||key==='comment_david')?230:86;const resize=()=>{x.style.height='auto';x.style.height=Math.max(minimum,x.scrollHeight+8)+'px'};x.style.resize='none';x.style.overflowY='hidden';resize();x.addEventListener('input',()=>{resize();clearTimeout(tid);tid=setTimeout(()=>save(p,key,x.value,x),800)});x.addEventListener('blur',()=>{clearTimeout(tid);save(p,key,x.value,x)})}else x.addEventListener('change',()=>save(p,key,x.value,x));return x}
+async function save(p,key,value,input){
+ const val=cast(key,value);
+ if(nums.has(key)&&val!==null&&!Number.isFinite(val)){flash('Invalid number',true);return}
+ if(String(p[key]??'')===String(val??''))return;
+ const overrides={...(p.manual_overrides||{}),[key]:true};
+ const r=await history.save(p,{[key]:val,manual_overrides:overrides});
+ if(r.error){flash(r.error.message,true);input?.classList.add('hh-savefail');return}
+ input?.classList.remove('hh-savefail');flash('Saved');
+}
+function editor(p,key,type='text'){let x=node(type==='textarea'?'textarea':type==='select'?'select':'input');if(type==='select'){for(const [v,label] of Object.entries(statuses)){const opt=node('option','',label);opt.value=v;x.append(opt)}x.value=p[key]||'saved'}else{if(type==='number'){x.type='number';x.step='any';x.min='0'}if(type==='textarea')x.rows=6;x.value=p[key]??''}x.setAttribute('aria-label',key+' '+p.address);let tid;if(type==='textarea'){const minimum=(key==='comment_sabina'||key==='comment_david')?230:86;const resize=()=>{x.style.height='auto';x.style.height=Math.max(minimum,x.scrollHeight+8)+'px'};x.style.resize='none';x.style.overflowY='hidden';resize();x.addEventListener('input',()=>{resize();clearTimeout(tid);tid=setTimeout(()=>save(p,key,x.value,x),800)});x.addEventListener('blur',()=>{clearTimeout(tid);save(p,key,x.value,x)})}else x.addEventListener('change',()=>save(p,key,x.value,x));return x}
 const cell=value=>{const t=node('td');if(value instanceof Node)t.append(value);else t.textContent=value;return t};
 const val=v=>v==null||v===''?'—':String(v);
 
@@ -94,21 +103,23 @@ function travelCell(p){
  for(const d of travelDestinations){
   const line=node('div','hh-trip'),title=node('span','hh-trip-title',d.title+' · '+d.arrival),minutes=node('strong','hh-trip-minutes',journeySummary(p,d));
   line.append(title,minutes);
-   if(editing){
-    const label=node('label','hh-trip-edit'),input=node('input');
-    label.append(node('span','hh-mini','Minutes'),input);
-    input.type='number';input.step='1';input.min='0';
-    input.value=p.journey_estimates?.[d.id]?.minutes??'';
-    input.onchange=async()=>{
+   minutes.title='Click to edit this journey time';minutes.style.cursor='text';
+   minutes.onclick=()=>{
+    if(line.querySelector('input'))return;
+    const input=node('input','hh-journey-inline');input.type='number';input.min='0';input.step='1';input.value=p.journey_estimates?.[d.id]?.minutes??'';
+    line.replaceChildren(title,input);input.focus();input.select();
+    let busy=false;
+    const commit=async()=>{if(busy)return;busy=true;
      const n=Number(input.value);
-     if(input.value===''||!Number.isFinite(n)||n<0){flash('Enter journey minutes',true);return}
+     if(input.value.trim()===''||!Number.isFinite(n)||n<0){flash('Invalid journey minutes',true);line.replaceChildren(title,minutes);return}
      const data={...(p.journey_estimates||{}),[d.id]:{...(p.journey_estimates?.[d.id]||{}),minutes:n,origin:p.latitude+','+p.longitude,calculated_at:new Date().toISOString(),manual_override:true}};
-     const result=await sb.from('properties').update({journey_estimates:data}).eq('id',p.id);
-     if(result.error){flash(result.error.message,true);return}
-     p.journey_estimates=data;minutes.textContent='~'+Math.round(n)+' min';flash('Journey saved');
+     const r=await history.save(p,{journey_estimates:data});
+     if(r.error)flash(r.error.message,true);else{minutes.textContent='~'+Math.round(n)+' min';flash('Saved')}
+     line.replaceChildren(title,minutes);
     };
-    line.append(label);
-   }
+    input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();void commit()}if(e.key==='Escape'){busy=true;line.replaceChildren(title,minutes)}};
+    input.onblur=()=>void commit();
+   };
    wrapper.append(line);view[d.id]=minutes;
  }
  wrapper.append(node('small','hh-trip-help','Arrival time · typical Tuesday · public transport'));
@@ -129,7 +140,7 @@ function render(list){
   const house=node('div','hh-house'),photos=node('div','hh-photo-grid');
   distinctPhotos(p,photos).catch(e=>console.warn('Photo gallery',e));
   const address=node('div','hh-address',clean(p.address||p.title));
-  address.contentEditable=editing?'true':'false';address.setAttribute('role','textbox');address.setAttribute('aria-label','Property address, editable');
+  address.contentEditable='true';address.setAttribute('role','textbox');address.setAttribute('aria-label','Property address, editable');
   address.spellcheck=false;address.title='Edit property address';
   address.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();address.blur()}});
   address.addEventListener('blur',()=>save(p,'address',address.textContent.trim(),address));
@@ -138,7 +149,7 @@ function render(list){
   details.type='button';details.onclick=()=>openHouse(p);
   details.style.cssText='display:block;margin-top:6px;padding:5px 10px;font-size:12px;background:#fff;color:#315e50;border-color:#cbd7d1';
   house.append(photos,address,link,details);
-   if(editing){const all=node('button','hh-edit-all','Edit all details');all.onclick=()=>openHouse(p);house.append(all)}
+
   tr.append(cell(house));
   const price=labelledEditor(p,'£','price','number');price.classList.add('hh-price-editor');tr.append(cell(price));
   tr.append(cell(editor(p,'bedrooms','number')));
@@ -163,28 +174,7 @@ function render(list){
    const entry=node('div','hh-station-entry');
    entry.append(labelledEditor(p,'Station '+(i+1),i===0?'station_name':'station_2_name'));
    entry.append(stationAccess.attach(p,i));
-    if(editing){
-      const cache=p.station_commutes?.results?.[i]||{},override=p.station_commutes?.google_verified?.[i===0?p.station_name:p.station_2_name]||{};
-      const controls=[['walking_miles','Walking miles',override.walking_miles??cache.walking_miles??p[i===0?'station_distance_miles':'station_2_distance_miles']],['walking_minutes','Walking min',override.walking_minutes??cache.walking_minutes],['pt_minutes','PT min',override.pt_minutes??cache.avg_minutes]];
-      const box=node('div','hh-station-manual');
-      for(const [key,title,current] of controls){
-        const label=node('label','hh-field hh-manual-field'),input=node('input'),cap=node('span','hh-mini',title);
-        input.type='number';input.step='any';input.min='0';input.value=current??'';
-        label.append(cap,input);box.append(label);
-        input.onchange=async()=>{
-          const v=input.value===''?null:Number(input.value);
-          if(v!==null&&(!Number.isFinite(v)||v<0)){flash('Invalid station number',true);return}
-          const name=i===0?p.station_name:p.station_2_name;
-          const corrections={...(p.station_commutes?.google_verified||{}),[name]:{...(p.station_commutes?.google_verified?.[name]||{}),[key]:v,source:'manual',updated_at:new Date().toISOString()}};
-          const data={station_commutes:{...(p.station_commutes||{}),google_verified:corrections}};
-          if(key==='walking_miles')data[i===0?'station_distance_miles':'station_2_distance_miles']=v;
-          const result=await sb.from('properties').update(data).eq('id',p.id);
-          if(result.error){flash(result.error.message,true);return}
-          Object.assign(p,data);flash('Saved');render(rows);
-        };
-      }
-      entry.append(box);
-    }
+
    station.append(entry);
   }
   tr.append(cell(station));
@@ -192,7 +182,7 @@ function render(list){
   tr.append(cell(editor(p,'comment_sabina','textarea')));
   tr.append(cell(editor(p,'comment_david','textarea')));
   tr.append(cell(editor(p,'status','select')));
-  const view=node('input');view.type='datetime-local';view.value=p.viewing_at?p.viewing_at.slice(0,16):'';view.setAttribute('aria-label','Viewing date '+(p.address||p.title));view.disabled=!editing;view.onchange=async()=>{if(!editing)return;const v=view.value?new Date(view.value).toISOString():null;const r=await sb.from('properties').update({viewing_at:v}).eq('id',p.id);if(r.error)flash(r.error.message,true);else{p.viewing_at=v;flash('Saved')}};tr.append(cell(view));
+  const view=node('input');view.type='datetime-local';view.value=p.viewing_at?p.viewing_at.slice(0,16):'';view.setAttribute('aria-label','Viewing date '+(p.address||p.title));view.onchange=async()=>{const v=view.value?new Date(view.value).toISOString():null;const r=await history.save(p,{viewing_at:v,manual_overrides:{...(p.manual_overrides||{}),viewing_at:true}});if(r.error)flash(r.error.message,true);else flash('Saved')};tr.append(cell(view));
   if(tr.cells.length!==labels.length)throw Error('Comparison column count mismatch');
   body.append(tr);
  }
@@ -202,10 +192,10 @@ function render(list){
 }
 const detail=node('section','hh-aux'),detailGrid=node('div','hh-auxgrid'),controls={};
 detail.append(node('h3','','Property details'),detailGrid);
-for(const [key,label,type] of extras){const l=node('label',type==='textarea'?'wide':'');l.append(document.createTextNode(label));const x=node(type==='textarea'?'textarea':'input');if(type==='textarea')x.rows=2;else{x.type=type;if(type==='number')x.step='any'}x.readOnly=!editing;l.append(x);controls[key]=x;detailGrid.append(l)}
+for(const [key,label,type] of extras){const l=node('label',type==='textarea'?'wide':'');l.append(document.createTextNode(label));const x=node(type==='textarea'?'textarea':'input');if(type==='textarea')x.rows=2;else{x.type=type;if(type==='number')x.step='any'}l.append(x);controls[key]=x;detailGrid.append(l)}
 $('dialog').querySelector('.actions').before(detail);
 const floorPanel=node('section','hh-planbox'),floorContents=node('div');floorPanel.append(node('h3','','Floor plans'),floorContents);$('detailFacts').before(floorPanel);
-async function open(p){for(const [key] of extras){controls[key].value=p[key]??'';controls[key].readOnly=!editing;}floorContents.replaceChildren();if(!(p.floorplans||[]).length){floorPanel.hidden=true;return}floorPanel.hidden=false;
+async function open(p){for(const [key] of extras)controls[key].value=p[key]??'';floorContents.replaceChildren();if(!(p.floorplans||[]).length){floorPanel.hidden=true;return}floorPanel.hidden=false;
 for(const f of p.floorplans){const u=await photo(f);if(!u)continue;if(/\.pdf(?:\?|$)/i.test(f.path||f.url||'')||/^https:\/\/www\.onthemarket\.com\/details\/\d+\/#\/floorplans\/\d+$/i.test(u)){const a=node('a','','Open floor plan ↗');a.href=u;a.target='_blank';a.rel='noopener noreferrer';floorContents.append(a)}else{const image=node('img');image.src=u;image.alt='Floor plan';floorContents.append(image)}}}
 function edited(){const o={};for(const [key] of extras)o[key]=cast(key,controls[key].value);return o}
 async function postcodeLocate(p){const a=p.address||p.title||'',full=a.match(/\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i),out=a.match(/\b([A-Z]{1,2}\d[A-Z\d]?)\b/i);if(!full&&!out)return false;const url=full?'https://api.postcodes.io/postcodes/'+encodeURIComponent(full[1].replace(/\s/g,'')):'https://api.postcodes.io/outcodes/'+encodeURIComponent(out[1]);const r=await fetch(url);if(!r.ok)return false;const j=await r.json(),v=j.result;if(!v||!Number.isFinite(v.latitude)||!Number.isFinite(v.longitude))return false;const saveResult=await sb.from('properties').update({latitude:v.latitude,longitude:v.longitude}).eq('id',p.id);if(saveResult.error)throw saveResult.error;p.latitude=v.latitude;p.longitude=v.longitude;return true}
@@ -411,5 +401,5 @@ function redraw(){
  scheduleTransport();
 }
 
-return {render,open,edited,isEditing:()=>editing};
+return {render,open,edited};
 }
