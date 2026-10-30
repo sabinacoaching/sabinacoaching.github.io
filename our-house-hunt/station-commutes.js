@@ -1,69 +1,34 @@
-// Station journey estimates are independent of the three main travel destinations.
-// The Google Maps route opens with one click; numbers are labelled Google only when
-// returned by the authenticated server using the official Google Routes API.
+// The station is supplied to Google Maps by its real STATION NAME, never its
+// approximate TfL point coordinates (which Google can label as a nearby road).
+// Public-transport times stay hidden until validated by a Google route source.
 export function setupStationAccess({sb}) {
- const queue=[],pending=new Set(),views=new Map(),retry=new Map();
- let processing=false;
- const node=(tag,cls='',content)=>{const e=document.createElement(tag);e.className=cls;e.textContent=content;return e};
- const names=p=>[p.station_name||'',p.station_2_name||''];
- const fresh=p=>{
-  const c=p.station_commutes;
-  return p.latitude!=null&&p.longitude!=null&&c?.origin===p.latitude+','+p.longitude&&
-    JSON.stringify(c.names)===JSON.stringify(names(p))&&Array.isArray(c.results)&&
-    Date.now()-Date.parse(c.calculated_at||0)<6*86400000;
- };
- function googleUrl(p,i,result){
+ const node=(tag,cls='',value)=>{const e=document.createElement(tag);e.className=cls;e.textContent=value;return e};
+ const nameFor=(p,i)=>String(i===0?p.station_name||'':p.station_2_name||'').trim();
+ function stationDestination(p,i){
+  const raw=nameFor(p,i);
+  if(!raw)return '';
+  if(/tram/i.test(raw))return raw.replace(/\\s*stop$/i,'')+' Tram Stop, London, UK';
+  if(/underground|tube/i.test(raw))return raw.replace(/\\s*underground$/i,'')+' Underground Station, London, UK';
+  return raw.replace(/\\s*(?:rail|railway|train|station)$/i,'')+' Railway Station, London, UK';
+ }
+ function mapsUrl(p,i,mode){
+  // Coordinates are only for the HOUSE origin. For the destination use a named
+  // railway/Underground/tram station to resolve the correct entrance in Maps.
   const origin=p.latitude!=null&&p.longitude!=null?p.latitude+','+p.longitude:p.address||'';
-  const destination=result?.lat!=null&&result?.lon!=null?
-    result.lat+','+result.lon:(names(p)[i]+' station, London, UK');
-  return 'https://www.google.com/maps/dir/?'+new URLSearchParams({api:'1',origin,destination,travelmode:'walking'}).toString();
- }
- function update(p,i){
-  const v=views.get(p.id+':'+i);if(!v)return;
-  const c=fresh(p)?p.station_commutes:null,r=c?.results?.[i],g=r?.google_walking;
-  const distanceKey=i===0?'station_distance_miles':'station_2_distance_miles';
-  const mi=g?.miles!=null?Number(g.miles).toFixed(2):p[distanceKey]!=null?Number(p[distanceKey]).toFixed(2):'—';
-  const walkingMinutes=g?.minutes!=null?Math.round(g.minutes)+' min':'— min';
-  v.walk.textContent='Walking: '+mi+' mi / '+walkingMinutes;
-  v.google.href=googleUrl(p,i,r);
-  if(r?.avg_minutes!=null){
-   v.pt.textContent='PT: ~'+Math.round(r.avg_minutes)+' min';
-   v.pt.title='TfL average, '+r.samples.filter(x=>x.minutes!=null).length+' of 5 Tuesday departures: 07:30, 10:00, 12:30, 15:00, 17:30';
-  }else{
-   v.pt.textContent='PT: '+(r?.error?'unavailable':r?.note?'no reliable route':p.latitude==null?'no map point':'calculating…');
-   v.pt.title=r?.error||r?.note||'';
-  }
-
- }
- async function processQueue(){
-  if(processing)return;processing=true;
-  while(queue.length){
-   const p=queue.shift();
-   try{
-    const res=await sb.functions.invoke('house-hunt-station-commutes',{body:{id:p.id}});
-    if(res.error)throw res.error;
-    if(!res.data?.commutes)throw Error(res.data?.error||'No station journey data');
-    p.station_commutes=res.data.commutes;
-    update(p,0);update(p,1);
-   }catch(e){
-    console.warn('Station commute calculation',p.address,e);
-    retry.set(p.id,Date.now()+180000);
-    for(let i=0;i<2;i++){const v=views.get(p.id+':'+i);if(v)v.pt.textContent='PT: unavailable'}
-   }finally{pending.delete(p.id)}
-   await new Promise(resolve=>setTimeout(resolve,5200));
-  }
-  processing=false;
+  return 'https://www.google.com/maps/dir/?'+new URLSearchParams({api:'1',origin,destination:stationDestination(p,i),travelmode:mode}).toString();
  }
  function attach(p,i){
-  const box=node('div','hh-station-access'),walk=node('div','hh-station-walk'),
-        pt=node('div','hh-station-pt'),google=node('a','hh-station-google','Google Maps walking ↗');
-  google.target='_blank';google.rel='noopener noreferrer';google.title='Open walking directions from house to this station';
-  box.append(walk,google,pt);
-  views.set(p.id+':'+i,{walk,pt,google});
-  update(p,i);
-  if(p.latitude!=null&&p.longitude!=null&&names(p)[i]&&!fresh(p)&&!pending.has(p.id)&&Date.now()>(retry.get(p.id)||0)){
-    pending.add(p.id);queue.push(p);void processQueue();
-  }
+  const box=node('div','hh-station-access'),walk=node('div','hh-station-walk'),pt=node('div','hh-station-pt'),google=node('a','hh-station-google','Google Maps walking ↗'),transit=node('a','hh-station-google','Google Maps PT ↗');
+  const mi=p[i===0?'station_distance_miles':'station_2_distance_miles'];
+  const googleWalk=p.station_commutes?.results?.[i]?.google_walking;
+  // Do not show an empty '/ — min'. Google has not supplied minutes via its API.
+  walk.textContent='Walking: '+(googleWalk?.miles!=null?Number(googleWalk.miles).toFixed(2):mi==null?'—':Number(mi).toFixed(2))+' mi'+(googleWalk?.minutes!=null?' / '+Math.round(googleWalk.minutes)+' min':'');
+  google.href=mapsUrl(p,i,'walking');google.target='_blank';google.rel='noopener noreferrer';
+  transit.href=mapsUrl(p,i,'transit');transit.target='_blank';transit.rel='noopener noreferrer';
+  // Old TfL scores varied from the times Google Maps showed and were not
+  // independently reconciled. Never render them as validated PT journey times.
+  pt.textContent='PT: see Google Maps';
+  box.append(walk,google,pt,transit);
   return box;
  }
  return {attach};
