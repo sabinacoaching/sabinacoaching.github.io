@@ -83,7 +83,7 @@ dialog.hh-photo-viewer[open]{display:flex;flex-direction:column}
 <script type="module">
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 import {setupComparison} from './comparison.js?v=18';
-import {analyzeFloorplan,validateFloorplanImage} from './floorplan-ocr.js?v=10';
+import {analyzeFloorplan,inspectFloorplanImage} from './floorplan-ocr.js?v=11';
 const sb=createClient('https://ficnuovumurmhzdujjvj.supabase.co','sb_publishable_yrArzwZ2GizO5ATuiAkymg_LdpVZKC9');
 const $=id=>document.getElementById(id);
 const labels={saved:'Saved',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold'};
@@ -147,7 +147,7 @@ async function perceptualImageHash(blob){
  }finally{bitmap.close()}
 }
 function hashDistance(a,b){let n=0;for(let i=0;i<a.length;i++)if(a[i]!==b[i])n++;return n}
-async function archive(urls,id,prefix='photo',limit=10){
+async function archive(urls,id,prefix='photo',limit=10,checks=[]){
  const saved=[],hashes=[],seenUrls=new Set();
  let index=0;
  for(const sourceUrl of (urls||[]).slice(0,Math.max(limit*5,50))){
@@ -155,26 +155,48 @@ async function archive(urls,id,prefix='photo',limit=10){
   if(typeof sourceUrl!=='string'||seenUrls.has(sourceUrl))continue;
   seenUrls.add(sourceUrl);
   if(prefix==='photo'&&/\/(?:logo|avatar|icon|favicon|floor.?plans?)(?:[-._/]|$)/i.test(sourceUrl))continue;
+  const trace=prefix==='source-plan'?{url:sourceUrl.slice(0,480)}:null;
   try{
-   const data=await extension('FETCH_IMAGE',{url:sourceUrl},20000);
+   const data=await extension('FETCH_IMAGE',{url:sourceUrl},25000);
    const blob=blob64(data.base64,data.mime);
-   if(blob.size<1300||blob.size>5000000)continue;
-   if(prefix==='source-plan'&&!(await validateFloorplanImage(blob))){console.warn('Discarding image without floorplan labels',sourceUrl);continue;}
+   if(trace){trace.bytes=blob.size;trace.mime=blob.type}
+   if(blob.size<1300||blob.size>5000000){
+    if(trace){trace.status='invalid-size';checks.push(trace)}continue;
+   }
+   const ext=data.mime==='application/pdf'?'pdf':data.mime==='image/png'?'png':data.mime==='image/webp'?'webp':data.mime==='image/avif'?'avif':'jpg';
+   if(trace){
+    const verdict=await inspectFloorplanImage(blob);
+    trace.validation=verdict;
+    if(!verdict.accepted){
+     // Retain a failed candidate privately for diagnosis, never display it as a verified plan.
+     const qpath=id+'/plan-candidate-'+crypto.randomUUID().slice(0,12)+'.'+ext;
+     const q=await sb.storage.from('property-photos').upload(qpath,blob,{contentType:data.mime,upsert:false});
+     if(!q.error)trace.quarantine_path=qpath;
+     trace.status='validation-rejected';checks.push(trace);
+     console.warn('Source listing image was not a verified plan',verdict,sourceUrl);
+     continue;
+    }
+   }
    let hash=null;
    try{hash=await perceptualImageHash(blob)}catch(e){console.warn('Cannot compare picture; preserving image',e)}
-   if(hash&&hashes.some(other=>hashDistance(hash,other)<=12))continue;
-   const ext=data.mime==='application/pdf'?'pdf':data.mime==='image/png'?'png':data.mime==='image/webp'?'webp':'jpg';
-   const path=id+'/'+prefix+'-'+index+'.'+ext;
+   if(hash&&hashes.some(other=>hashDistance(hash,other)<=12)){
+    if(trace){trace.status='duplicate-plan';checks.push(trace)}continue;
+   }
+   // Unique path on every retry. A previous partial upload cannot block this save.
+   const path=id+'/'+prefix+'-'+crypto.randomUUID().slice(0,12)+'-'+index+'.'+ext;
    report('Saving '+prefix+' '+(saved.length+1)+'…');
    const up=await sb.storage.from('property-photos').upload(path,blob,{contentType:data.mime,upsert:false});
    if(up.error)throw up.error;
    if(hash)hashes.push(hash);
    saved.push({path});index++;
-  }catch(e){console.warn('Cannot archive image',sourceUrl,e)}
+   if(trace){trace.status='saved';trace.path=path;checks.push(trace)}
+  }catch(e){
+   if(trace){trace.status='download-or-storage-error';trace.error=String(e?.message||e).slice(0,300);checks.push(trace)}
+   console.warn('Cannot archive image',sourceUrl,e);
+  }
  }
- return saved
+ return saved;
 }
-
 
 /* Read only counts explicitly stated by the listing; never infer an extra bathroom from room photographs. */
 function listingBathrooms(data){
@@ -204,9 +226,10 @@ async function importHouse(raw){
  const images=await archive(data.images,id,'photo',24);
  if(!images.length)throw Error('Photographs could not be downloaded. House not added.');
  // Reject duplicated URLs; the extension's floor-plan classification still needs a separate visual validation step.
- const floorplanCandidates=(data.floorplans||[]).filter(u=>!(data.images||[]).includes(u));
- const floorplans=await archive(floorplanCandidates,id,'source-plan',5);
- const p={id,url,source:data.source,title:data.title||'',address:data.address||'',price:data.price??null,bedrooms:data.bedrooms??null,bathrooms:listingBathrooms(data),wc_count:data.wc_count??null,floors:listingFloors(data),floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:null,garden_description:data.garden_description||'',station_name:data.station_name||'',station_distance_miles:data.station_distance_miles??null,station_2_name:data.station_2_name||'',station_2_distance_miles:data.station_2_distance_miles??null,latitude:data.latitude??null,longitude:data.longitude??null,property_type:data.property_type||null,tenure:data.tenure||null,images,floorplans,created_by:user.id,status:'saved'};
+ const floorplanCandidates=data.floorplans||[];
+ const planChecks=[];
+ const floorplans=await archive(floorplanCandidates,id,'source-plan',5,planChecks);
+ const p={id,url,source:data.source,title:data.title||'',address:data.address||'',price:data.price??null,bedrooms:data.bedrooms??null,bathrooms:listingBathrooms(data),wc_count:data.wc_count??null,floors:listingFloors(data),floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:null,garden_description:data.garden_description||'',station_name:data.station_name||'',station_distance_miles:data.station_distance_miles??null,station_2_name:data.station_2_name||'',station_2_distance_miles:data.station_2_distance_miles??null,latitude:data.latitude??null,longitude:data.longitude??null,property_type:data.property_type||null,tenure:data.tenure||null,images,floorplans,import_diagnostics:{source:'original-listing',extension_version:data.extension_version||'unknown',status:data.floorplan_status||'unknown',candidates:floorplanCandidates.length,archived:floorplans.length,checks:planChecks,attempted_at:new Date().toISOString()},created_by:user.id,status:'saved'};
  const r=await sb.from('properties').insert(p);
  if(r.error)throw r.error;
  report('House saved with '+images.length+' photographs. Completing location, stations and floor plan…');
@@ -238,8 +261,10 @@ async function enrichProperty(p){
  // Prefer a plan from the ORIGINAL listing if a legacy record only has a secondary-site viewer link.
  const hasLegacyExternalViewer=(p.floorplans||[]).some(f=>/^https:\/\/www\.onthemarket\.com\//i.test(f.url||'')||/\/(?:otm-\d+-plan|source-archive-floorplan)/i.test(f.path||''));
  if(((!p.floorplans||!p.floorplans.length)||hasLegacyExternalViewer)&&(data.floorplans||[]).length){
-   const plans=await archive((data.floorplans||[]).filter(u=>!(data.images||[]).includes(u)),p.id,'source-plan',5);
+   const checks=[];
+   const plans=await archive(data.floorplans||[],p.id,'source-plan',5,checks);
    p._floorplan_import.archived=plans.length;
+   p._floorplan_import.checks=checks;
    if(plans.length)details.floorplans=plans;
  }
  const savedFields=Object.keys(details);
@@ -248,7 +273,7 @@ async function enrichProperty(p){
    status:p._floorplan_import.status,tab_found:p._floorplan_import.tabFound,
    tab_clicked:p._floorplan_import.tabClicked,candidates:p._floorplan_import.found,
    archived:p._floorplan_import.archived,error:p._floorplan_import.error,
-   attempted_at:new Date().toISOString()
+   checks:p._floorplan_import.checks||[],attempted_at:new Date().toISOString()
  };
  const r=await sb.from('properties').update(details).eq('id',p.id);
  if(r.error)throw r.error;
