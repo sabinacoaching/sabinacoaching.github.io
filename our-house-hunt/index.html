@@ -388,7 +388,7 @@ async function autoFillMissing(){
   try{
    const changed=await enrichProperty(p);
    changedTotal+=changed.length;
-   if(!p.floorplans?.length)unresolved.push(p.address+': '+(p._floorplan_import?.status||'plan not extracted'));
+   if(!p.floorplans?.length){const info=p._floorplan_import;const checks=(info?.checks||[]).map(x=>x.status+(x.error?': '+x.error:x.validation?.reason?': '+x.validation.reason:'')).join(', ');unresolved.push(p.address+': '+(checks||info?.status||'plan not extracted'));}
    ++checked;
    await refresh();
   }catch(e){++checked;unresolved.push(p.address+': '+(e.message||String(e)));console.warn('Auto-fill failed for '+p.url,e)}
