@@ -2,7 +2,18 @@
 export function createEditHistory({sb,onRestored}){
  const key='house-hunt:edit-history:v1',watchers=new Set();
  let stack=[];try{const v=JSON.parse(localStorage.getItem(key)||'[]');if(Array.isArray(v))stack=v.slice(-20)}catch{}
- const eq=(a,b)=>JSON.stringify(a??null)===JSON.stringify(b??null);
+ const canonical=v=>{
+  if(v==null)return null;
+  if(Array.isArray(v))return v.map(canonical);
+  if(typeof v==='object')return Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])]));
+  return v;
+ };
+ const eq=(a,b)=>{
+  if(a==null&&b==null)return true;
+  if(typeof a==='number'&&typeof b==='string'&&b.trim()!==''&&Number.isFinite(Number(b)))return a===Number(b);
+  if(typeof b==='number'&&typeof a==='string'&&a.trim()!==''&&Number.isFinite(Number(a)))return b===Number(a);
+  return JSON.stringify(canonical(a))===JSON.stringify(canonical(b));
+ };
  const clone=v=>v==null?null:JSON.parse(JSON.stringify(v));
  const notify=()=>{for(const fn of watchers)fn(stack.length)};
  const persist=()=>{try{localStorage.setItem(key,JSON.stringify(stack.slice(-20)))}catch{}notify()};
