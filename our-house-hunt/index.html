@@ -82,9 +82,9 @@ dialog.hh-photo-viewer[open]{display:flex;flex-direction:column}
 </dialog>
 <script type="module">
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.8';
-import {setupComparison} from './comparison.js?v=35';
+import {setupComparison} from './comparison.js?v=36';
 import {createEditHistory} from './edit-history.js?v=1';
-import {analyzeFloorplan,inspectFloorplanImage} from './floorplan-ocr.js?v=13';
+import {analyzeFloorplan,inspectFloorplanImage} from './floorplan-ocr.js?v=14';
 const sb=createClient('https://ficnuovumurmhzdujjvj.supabase.co','sb_publishable_yrArzwZ2GizO5ATuiAkymg_LdpVZKC9');
 const $=id=>document.getElementById(id);
 const labels={saved:'Saved',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold'};
@@ -240,7 +240,45 @@ async function importHouse(raw){
  try { await analyzeFloorplan({sb,property:p,photo}); } catch(e) { failures.push('floor plan'); console.warn('Automatic floor plan reading unavailable',e); }
  await refresh(); // Re-render to trigger public-transport journey estimates once coordinates have been saved.
  const missing=[p.latitude==null?'map point':null,!p.station_name?'stations':null,p.bathrooms==null?'bathrooms':null,p.floors==null?'floors':null,p.floor_area_sqm==null?'floor area':null,!p.floorplans?.length?'floor plan':null].filter(Boolean);
- report(missing.length?'House saved. Still missing: '+missing.join(', ')+'. Automatic checks will retry on the next visit.':'House imported with location, stations and essential details. Journey times are being calculated.',!!failures.length);
+ if(missing.length){
+  report('House added. Finishing automatic import: '+missing.join(', ')+'.');
+  void finishNewHouseImport(p.id);
+ }else report('House imported with original floor plan, measurements and stations. Journey times are being calculated.');
+}
+// Finish new imports during this browser visit, not on a manual reload.
+// Read fresh DB rows on every pass and preserve any user-specified fields.
+const finishingImports=new Set();
+async function finishNewHouseImport(id){
+ if(finishingImports.has(id))return;
+ finishingImports.add(id);
+ try{
+  for(let attempt=0;attempt<3;attempt++){
+   if(attempt)await new Promise(resolve=>setTimeout(resolve,3500*(attempt+1)));
+   const query=await sb.from('properties').select('*').eq('id',id).single();
+   if(query.error||!query.data)break;
+   const p=query.data;
+   const missingPlan=!(p.floorplans||[]).length;
+   const missingGeo=p.latitude==null||p.longitude==null||!p.station_name||!p.station_2_name||p.station_distance_miles==null||p.station_2_distance_miles==null;
+   const missingFacts=p.floors==null||p.floor_area_sqm==null;
+   if(!missingPlan&&!missingGeo&&!missingFacts){report('Import complete: '+p.address+'.');await refresh();return}
+   report('Completing '+p.address+' automatically (pass '+(attempt+1)+'/3)…');
+   if(missingPlan||missingFacts){
+    try{await enrichProperty(p)}catch(e){console.warn('Original listing retry',p.address,e)}
+   }
+   if(missingGeo){
+    try{await enrichWalkingStations(p)}catch(e){console.warn('Station/geocoding retry',p.address,e)}
+   }
+   if((p.floorplans||[]).length&&(p.floor_area_sqm==null||p.floors==null||p.garden_area_sqm==null)){
+    try{await analyzeFloorplan({sb,property:p,photo})}catch(e){console.warn('Plan recognition retry',p.address,e)}
+   }
+   await refresh();
+  }
+  const q=await sb.from('properties').select('address,floorplans,floors,floor_area_sqm,station_name,station_2_name').eq('id',id).single();
+  if(!q.error&&q.data){
+   const p=q.data,missing=[!p.floorplans?.length?'floor plan':null,p.floors==null?'floors':null,p.floor_area_sqm==null?'floor area':null,!p.station_name||!p.station_2_name?'stations':null].filter(Boolean);
+   report(missing.length?'Imported. Fields unavailable after source checks: '+missing.join(', ')+'.':'Import complete: '+p.address+'.',!!missing.length);
+  }
+ }finally{finishingImports.delete(id)}
 }
 async function enrichProperty(p){
  let data;
