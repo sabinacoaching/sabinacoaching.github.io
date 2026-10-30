@@ -22,15 +22,15 @@ export function setupStationAccess({sb}){
   const v=views.get(p.id+':'+i);if(!v)return;
   const c=p.station_commutes||{},r=c.results?.[i]||{},t=completed(p)?c.tfl_final.results?.[i]:null,override=c.google_verified?.[names(p)[i]]||{};
   const google=c.google_routes?.complete&&c.google_routes?.origin===p.address&&c.google_routes?.stations?.[i]===names(p)[i]?c.google_routes.results[i]:null;
-  const mi=google?.walking_miles??override.walking_miles??t?.walking_miles??r.walking_miles??r.google_walking?.miles??p[i===0?'station_distance_miles':'station_2_distance_miles'];
-  const mins=google?.walking_minutes??override.walking_minutes??t?.walking_minutes??r.walking_minutes??r.google_walking?.minutes??r.walking_estimate?.minutes??(mi!=null?Math.round(Number(mi)*20):null);
+  const mi=override.walking_miles??google?.walking_miles??t?.walking_miles??r.walking_miles??r.google_walking?.miles??p[i===0?'station_distance_miles':'station_2_distance_miles'];
+  const mins=override.walking_minutes??google?.walking_minutes??t?.walking_minutes??r.walking_minutes??r.google_walking?.minutes??r.walking_estimate?.minutes??(mi!=null?Math.round(Number(mi)*20):null);
   const approxMiles=google?.walking_miles==null&&override.walking_miles==null&&t?.walking_miles==null&&r.walking_miles==null&&r.google_walking?.miles==null;
   const approxMins=google?.walking_minutes==null&&override.walking_minutes==null&&t?.walking_minutes==null&&r.walking_minutes==null&&r.google_walking?.minutes==null;
   v.walk.textContent='Walking: '+(mi!=null?(approxMiles?'~':'')+Number(mi).toFixed(2)+' mi':'—')+(mins!=null?' / '+(approxMins?'~':'')+Math.round(mins)+' min':'');
   v.link.href=mapUrl(p,i);
-  const pt=google?.pt_minutes??override.pt_minutes??t?.avg_minutes??r.avg_minutes;
+  const pt=override.pt_minutes??google?.pt_minutes??t?.avg_minutes??r.avg_minutes;
   v.pt.textContent='PT: '+(pt!=null?(google?.pt_minutes!=null||override.pt_minutes!=null?'':'~')+Math.round(pt)+' min':t?'no PT route':'—');
-  v.pt.title=google?.pt_minutes!=null?'Google Routes API':override.pt_minutes!=null?'Google Maps time user-verified':t?'TfL five Tuesday departures':r.avg_minutes!=null?'Previous TfL saved time':'No timetable route';
+  v.pt.title=override.pt_minutes!=null?(override.source==='manual'?'Manually entered time':'User-verified time'):google?.pt_minutes!=null?'Google Routes API':t?'TfL five Tuesday departures':r.avg_minutes!=null?'Previous TfL saved time':'No timetable route';
  }
  async function drain(){
   if(working)return;working=true;
