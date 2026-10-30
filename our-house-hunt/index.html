@@ -381,9 +381,10 @@ async function autoFillMissing(){
   const key='hh-details-v10-'+p.id;
   // Never suppress the Nelson Road retry when an extension was updated in an open tab.
   // Older code marked the attempt complete before knowing if it found a plan.
-  if(p.id!==nelsonId&&sessionStorage.getItem(key)==='attempted')continue;
+  if(p.floorplans?.length&&p.id!==nelsonId&&sessionStorage.getItem(key)==='attempted')continue;
   if(checked>=3)break; // Avoid bulk rate-limited re-imports on every page load.
-  if(p.id!==nelsonId)sessionStorage.setItem(key,'attempted');
+  // Never cache a failure to obtain a floorplan. Refresh must retry missing plans.
+  if(p.floorplans?.length&&p.id!==nelsonId)sessionStorage.setItem(key,'attempted');
   report('Checking missing listing details for '+p.address+'…');
   try{
    const changed=await enrichProperty(p);
