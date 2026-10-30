@@ -1,6 +1,6 @@
 // Station times are calculated once by TfL and saved in the property record.
 // A single walking link opens Google Maps with the destination's station name.
-export function setupStationAccess({sb,history}){
+export function setupStationAccess({sb,history,shouldAutoCalculate}){
  const queue=[],pending=new Set(),attempted=new Set(),views=new Map();let working=false;
  const el=(tag,cls='',content='')=>{const e=document.createElement(tag);e.className=cls;e.textContent=content;return e};
  const names=p=>[String(p.station_name||'').trim(),String(p.station_2_name||'').trim(),String(p.station_3_name||'').trim()];
@@ -99,7 +99,7 @@ export function setupStationAccess({sb,history}){
   pt.onkeydown=e=>{if(e.target===pt&&(e.key==='Enter'||e.key===' ')){e.preventDefault();editLine(p,i,'pt',pt)}};
   box.append(walk,link,pt);
   views.set(p.id+':'+i,{walk,link,pt});render(p,i);
-  if(p.latitude!=null&&p.longitude!=null&&names(p).slice(0,2).every(Boolean)&&!completed(p)&&!pending.has(p.id)&&!attempted.has(p.id)){
+  if(shouldAutoCalculate?.(p)&&p.latitude!=null&&p.longitude!=null&&names(p).slice(0,2).every(Boolean)&&!completed(p)&&!pending.has(p.id)&&!attempted.has(p.id)){
    pending.add(p.id);queue.push(p);void drain();
   }
   return box;
