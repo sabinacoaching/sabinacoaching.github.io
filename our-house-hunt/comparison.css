@@ -121,27 +121,21 @@
 .hh-station-google{display:inline-block;font-size:11px;text-decoration:underline;margin-top:3px}
 .hh-station-source{display:block;font-size:10px;line-height:1.35;color:#76877c;margin-top:3px}
 
-/* Editing is explicitly locked until the shared Edit mode switch is enabled. */
-.hh-views .hh-edit-switch{margin-left:8px;border:2px solid #345c49;font-weight:750}
-.hh-views .hh-edit-switch.active{background:#b46533;color:#fff;border-color:#b46533}
-.hh-table-shell:not(.hh-edit-on) input[readonly],
-.hh-table-shell:not(.hh-edit-on) textarea[readonly],
-.hh-table-shell:not(.hh-edit-on) input:disabled,
-.hh-table-shell:not(.hh-edit-on) select:disabled{
-  border-color:transparent!important;background:transparent!important;color:#27352d!important;
-  opacity:1;cursor:default;box-shadow:none;pointer-events:none;
-}
-.hh-table-shell:not(.hh-edit-on) .hh-address[contenteditable=false]{cursor:default}
-.hh-table-shell.hh-edit-on{outline:2px solid #b46533;outline-offset:-2px}
-.hh-table-shell.hh-edit-on input:not([type=hidden]),.hh-table-shell.hh-edit-on textarea,.hh-table-shell.hh-edit-on select{
-  border:1px solid #a6bfae!important;background:#fff!important;pointer-events:auto;
-}
-.hh-inline-plan-upload{display:block!important;white-space:normal;text-align:left;max-width:150px;
-  padding:5px 8px!important;margin-top:8px;border:1px solid #d3e1d8!important;background:#eef6f1!important;
-  color:#28543b!important;font-size:12px!important;border-radius:6px}
-.hh-edit-all{margin-top:5px;padding:6px 9px;font-size:12px;border:1px solid #ddbb93;background:#fff7ef;color:#74471b}
-.hh-station-manual{padding:6px;border:1px solid #d6e7da;border-radius:8px;background:#f9fdf9;margin-top:5px}
-.hh-station-manual .hh-manual-field{padding:3px}
-.hh-station-manual input{max-width:92px!important;min-width:66px!important}
-.hh-trip-edit{display:block;max-width:110px;margin-top:4px}
-.hh-trip-edit input{max-width:100px!important;min-width:70px!important}
+
+/* Original editable appearance, with an unobtrusive undo control. */
+.hh-views .hh-undo{background:white;color:#315e50;border:1px solid #dce4df;padding:9px 12px;font-weight:600}
+.hh-views .hh-undo:disabled{opacity:.42;cursor:default}
+.hh-inline-plan-upload{display:block;max-width:170px;padding:4px 7px!important;margin-top:5px;
+ background:transparent!important;border:1px solid #dee8e1!important;color:#315e50!important;
+ font-size:11px!important;font-weight:600;border-radius:6px;text-align:left}
+.hh-station-access .hh-route-editable{cursor:text}
+.hh-station-access .hh-route-editable:hover{text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
+.hh-route-inline-edit{display:inline-flex;flex-wrap:wrap;align-items:end;gap:4px}
+.hh-route-inline-edit label{display:flex;flex-direction:column;gap:1px}
+.hh-route-inline-edit small{font-size:10px;color:#66766d}
+.hh-route-inline-edit input{width:63px;min-width:0!important;padding:4px;border:1px solid #abc3ae;border-radius:4px;background:white}
+.hh-route-inline-edit button{padding:4px 6px;font-size:11px}
+.hh-route-inline-edit .hh-route-cancel{background:transparent;color:#466553;border-color:#d5e3d8}
+.hh-trip-minutes{cursor:text}
+.hh-trip-minutes:hover{text-decoration:underline dotted;text-underline-offset:3px}
+.hh-trip .hh-journey-inline{max-width:85px;min-width:60px;width:78px;border:1px solid #abc3ae;border-radius:5px;padding:5px}
