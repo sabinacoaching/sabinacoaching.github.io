@@ -585,7 +585,7 @@ $('floorPlanFile').onchange=async()=>{
  }catch(e){alert('Unable to save floor plan: '+(e?.message||e))}
  finally{button.disabled=false;button.textContent='Upload floor plan'}
 };
-const history=createEditHistory({sb,onRestored:async()=>{await refresh();if($('dialog').open&&selected)await openHouse(selected)}});
+const history=createEditHistory({sb,onRestored:async()=>{const wasOpen=$('dialog').open;if(wasOpen)$('dialog').close();await refresh();if(wasOpen&&selected)await openHouse(selected)}});
 const enhancements=setupComparison({sb,history,photo,openHouse,openPhotoBrowser});
 const session=await sb.auth.getSession();user=session.data.session?.user||null;if(user){await show();startAutoFill();}else $('login').hidden=false;
 setInterval(()=>{if(user&&people[user.id]&&document.visibilityState==='visible'&&!document.activeElement?.matches('input,textarea,select')&&!$('dialog').open)refresh()},30000);
