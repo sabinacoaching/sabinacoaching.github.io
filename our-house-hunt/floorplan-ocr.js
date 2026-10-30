@@ -24,10 +24,11 @@ export function parsePlanText(original){
  const text=String(original||'').replace(/[×✕]/g,'x').replace(/(\d),(\d)/g,'$1.$2').replace(/\s+/g,' ');
  const result={},areaMatches=[
    /(?:total\s+(?:internal\s+|gross\s+)?(?:floor\s+)?area|gross\s+internal\s+area|gia|approx(?:imate)?\s+floor\s+area)[\s:;./\-]{0,15}.{0,95}?(\d{2,3}(?:\.\d{1,2})?)\s*(?:sq\.?\s*m(?:etres?)?|sqm|m2|m²)(?=\s|$|[.,;])/i,
-   /(\d{2,3}(?:\.\d{1,2})?)\s*(?:sq\.?\s*m|sqm|m2|m²).{0,45}?(?:total\s+(?:internal\s+)?area|gross\s+internal\s+area)\b/i
+   /(\d{2,3}(?:\.\d{1,2})?)\s*(?:sq\.?\s*m|sqm|m2|m²).{0,45}?(?:total\s+(?:internal\s+)?area|gross\s+internal\s+area)\b/i,
+   /(?:total\s+(?:internal\s+|gross\s+)?(?:floor\s+)?area|gross\s+internal\s+area|gia|approx(?:imate)?\s+floor\s+area)[\s:;./\-]{0,15}.{0,95}?(\d{3,4}(?:\.\d{1,2})?)\s*(?:sq\.?\s*f(?:t|eet)|sq\.?\s*ft|square\s+feet)(?=\s|$|[.,;])/i
  ];
  for(const rx of areaMatches){
-  const m=text.match(rx);if(m){const n=numeric(m[1]);if(n>=35&&n<=500){result.floor_area_sqm=n;break}}
+  const m=text.match(rx);if(m){const n=numeric(m[1]);const converted=/sq\\.?\\s*f(?:t|eet)|square\\s+feet/i.test(m[0])?Math.round(n*0.09290304*100)/100:n;if(converted>=35&&converted<=500){result.floor_area_sqm=converted;break}}
  }
  // A garden measurement must occur immediately after its label on the SAME printed line.
  // Do not join arbitrary room sizes to a garden label elsewhere in the floor plan.
@@ -47,13 +48,25 @@ export function parsePlanText(original){
  if(/\bground\s+floor\b/i.test(planLabels)&&/\bfirst\s+floor\b/i.test(planLabels)){
   result.floors=/\bthird\s+floor\b/i.test(planLabels)?4:/\bsecond\s+floor\b/i.test(planLabels)?3:2;
  }
+ // Room labels are authoritative for bathroom/WC classification, unlike the portal's combined count.
+ // Only count room labels occupying their own OCR line. An unlabelled room is left unknown.
+ const labelLines=String(original||'').split(/[\r\n]+/).map(line=>line.trim().replace(/\s+/g,' '));
+ let wetRooms=0,wcRooms=0;
+ for(const line of labelLines){
+   if(/^(?:bathroom|bath room|shower(?:\s*room)?|wet\s*room|en[\s-]?suite(?:\s*(?:bath|shower)?room)?)(?:\s*[1-4])?\s*(?:[(]\s*\d.*[)])?$/i.test(line))wetRooms++;
+   else if(/^(?:w\.?\s*c\.?|toilet|cloakroom(?:\s+w\.?\s*c\.?)?|guest\s+w\.?\s*c\.?)(?:\s*[1-4])?\s*$/i.test(line))wcRooms++;
+ }
+ if(wetRooms>0&&wetRooms<=8&&wcRooms<=5){
+   result.plan_bathrooms=wetRooms;
+   result.plan_separate_wcs=wcRooms;
+ }
  return result;
 }
 export async function analyzeFloorplan({sb,property,photo}){
  const p=property;
- if(!p?.id||!(p.floorplans||[]).length||(p.floor_area_sqm!=null&&p.garden_area_sqm!=null&&p.floors!=null))return {status:'not-needed'};
+ if(!p?.id||!(p.floorplans||[]).length)return {status:'not-needed'};
  const fingerprint=(p.floorplans||[])[0].path||(p.floorplans||[])[0].url;
- const key='hh-plan-ocr-v5:'+p.id+':'+fingerprint;
+ const key='hh-plan-ocr-v6:'+p.id+':'+fingerprint;
  let last=0;try{last=Number(localStorage.getItem(key)||0)}catch{}
  if(last&&Date.now()-last<30*86400000)return {status:'already-checked'};
  const imageUrl=await photo(p.floorplans[0]);
@@ -64,8 +77,21 @@ export async function analyzeFloorplan({sb,property,photo}){
  if(!blob.type.startsWith('image/'))return {status:'unsupported-plan'};
  const worker=await getWorker(),recognized=await worker.recognize(blob);
  const measurements=parsePlanText(recognized.data.text||''),changes={};
- for(const k of ['floor_area_sqm','garden_area_sqm','floors'])if(p[k]==null&&measurements[k]!=null)changes[k]=measurements[k];
- try{localStorage.setItem(key,String(Date.now()))}catch{}
+ // Total floor area printed on the plan has priority over an approximate listing value.
+ if(measurements.floor_area_sqm!=null&&Math.abs(Number(p.floor_area_sqm)-measurements.floor_area_sqm)>0.2)changes.floor_area_sqm=measurements.floor_area_sqm;
+ if(p.floor_area_sqm==null&&measurements.floor_area_sqm!=null)changes.floor_area_sqm=measurements.floor_area_sqm;
+ if(p.garden_area_sqm==null&&measurements.garden_area_sqm!=null)changes.garden_area_sqm=measurements.garden_area_sqm;
+ if(p.floors==null&&measurements.floors!=null)changes.floors=measurements.floors;
+ // Portal bathrooms count can include a separate WC; use labelled plan rooms only
+ // when their total agrees with the total reported in the source, or the source did not give a count.
+ const labelled=measurements.plan_bathrooms,standalone=measurements.plan_separate_wcs;
+ const portalTotal=p.bathrooms==null?null:Number(p.bathrooms)+(p.wc_count==null?0:Number(p.wc_count));
+ if(labelled!=null&&(portalTotal==null||labelled+standalone===portalTotal)){
+   if(p.bathrooms!==labelled)changes.bathrooms=labelled;
+   if(p.wc_count!==standalone)changes.wc_count=standalone;
+ }
+ // Cache only successful readable plans; failed extraction is retried at a later visit.
+ if(Object.keys(measurements).length)try{localStorage.setItem(key,String(Date.now()))}catch{}
  if(!Object.keys(changes).length)return {status:'no-labelled-measurements'};
  const saved=await sb.from('properties').update(changes).eq('id',p.id).select('id').single();
  if(saved.error)throw saved.error;
