@@ -204,7 +204,7 @@ async function importHouse(raw){
  if(!images.length)throw Error('Photographs could not be downloaded. House not added.');
  // Reject duplicated URLs; the extension's floor-plan classification still needs a separate visual validation step.
  const floorplanCandidates=(data.floorplans||[]).filter(u=>!(data.images||[]).includes(u));
- const floorplans=await archive(floorplanCandidates,id,'floorplan',5);
+ const floorplans=await archive(floorplanCandidates,id,'source-plan',5);
  const p={id,url,source:data.source,title:data.title||'',address:data.address||'',price:data.price??null,bedrooms:data.bedrooms??null,bathrooms:listingBathrooms(data),wc_count:data.wc_count??null,floors:listingFloors(data),floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:null,garden_description:data.garden_description||'',station_name:data.station_name||'',station_distance_miles:data.station_distance_miles??null,station_2_name:data.station_2_name||'',station_2_distance_miles:data.station_2_distance_miles??null,latitude:data.latitude??null,longitude:data.longitude??null,property_type:data.property_type||null,tenure:data.tenure||null,images,floorplans,created_by:user.id,status:'saved'};
  const r=await sb.from('properties').insert(p);
  if(r.error)throw r.error;
@@ -227,9 +227,9 @@ async function enrichProperty(p){
   if((p[key]==null||p[key]==='')&&value!=null)details[key]=value;
  }
  // Prefer a plan from the ORIGINAL listing if a legacy record only has a secondary-site viewer link.
- const hasLegacyExternalViewer=(p.floorplans||[]).some(f=>/^https:\/\/www\.onthemarket\.com\//i.test(f.url||''));
+ const hasLegacyExternalViewer=(p.floorplans||[]).some(f=>/^https:\/\/www\.onthemarket\.com\//i.test(f.url||'')||/\/(?:otm-\d+-plan|source-archive-floorplan)/i.test(f.path||''));
  if(((!p.floorplans||!p.floorplans.length)||hasLegacyExternalViewer)&&(data.floorplans||[]).length){
-   const plans=await archive((data.floorplans||[]).filter(u=>!(data.images||[]).includes(u)),p.id,'floorplan',5);
+   const plans=await archive((data.floorplans||[]).filter(u=>!(data.images||[]).includes(u)),p.id,'source-plan',5);
    if(plans.length)details.floorplans=plans;
  }
  if(Object.keys(details).length){
@@ -332,10 +332,11 @@ async function enrichWalkingStations(p){
 async function autoFillMissing(){
  if(!homes.length)return;
  // Source re-reading is expensive; location/transport enrichment runs independently below.
- const pending=homes.filter(p=>!p.floorplans?.length||p.floor_area_sqm==null||p.bathrooms==null||p.floors==null||!p.garden_description);
+ const prioritySources=new Set(['8335d199-cf19-4386-9bef-e1034a879d34','a0a893e4-9835-4c5d-926b-13c59e4039b6','70414489-c568-4aee-9c79-09e58b7a8e2d']);
+ const pending=homes.filter(p=>prioritySources.has(p.id)&&!(p.floorplans||[]).some(f=>/\/source-plan-/.test(f.path||''))||!p.floorplans?.length||p.floor_area_sqm==null||p.bathrooms==null||p.floors==null||!p.garden_description).sort((a,b)=>Number(prioritySources.has(b.id))-Number(prioritySources.has(a.id)));
  let checked=0,changedTotal=0;
  for(const p of pending){
-  const key='hh-details-v05-'+p.id;
+  const key='hh-details-v06-'+p.id;
   if(sessionStorage.getItem(key)==='attempted')continue;
   if(checked>=3)break; // Avoid bulk rate-limited re-imports on every page load.
   sessionStorage.setItem(key,'attempted');
