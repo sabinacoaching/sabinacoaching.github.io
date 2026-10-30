@@ -23,6 +23,7 @@ const numeric=s=>Number(String(s).replace(',','.'));
 export function parsePlanText(original){
  const text=String(original||'').replace(/[×✕]/g,'x').replace(/(\d),(?=\d{3}\b)/g,'$1').replace(/(\d),(\d)/g,'$1.$2').replace(/\s+/g,' ');
  const result={},areaMatches=[
+   /\bapprox(?:imate)?\s+area\s*[:=]\s*(?:\d{3,4}(?:,\d{3})?\s*sq\.?\s*ft\s*\/\s*)?(\d{2,3}(?:\.\d{1,2})?)\s*(?:sq\.?\s*m(?:etres?)?|sqm|m2|m²)(?=\s|$|[.,;])/i,
    /(?:total\s+(?:internal\s+|gross\s+)?(?:floor\s+)?area|gross\s+internal\s+area|gia|approx(?:imate)?\s+floor\s+area)[\s:;./\-]{0,15}.{0,95}?(\d{2,3}(?:\.\d{1,2})?)\s*(?:sq\.?\s*m(?:etres?)?|sqm|m2|m²)(?=\s|$|[.,;])/i,
    /(\d{2,3}(?:\.\d{1,2})?)\s*(?:sq\.?\s*m|sqm|m2|m²).{0,45}?(?:total\s+(?:internal\s+)?area|gross\s+internal\s+area)\b/i,
    /(?:total\s+(?:internal\s+|gross\s+)?(?:floor\s+)?area|gross\s+internal\s+area|gia|approx(?:imate)?\s+floor\s+area)[\s:;./\-]{0,15}.{0,95}?(\d{3,4}(?:\.\d{1,2})?)\s*(?:sq\.?\s*f(?:t|eet)|sq\.?\s*ft|square\s+feet)(?=\s|$|[.,;])/i
@@ -38,6 +39,15 @@ export function parsePlanText(original){
   const candidate=row.replace(/[×✕]/g,'x').replace(/(\d),(\d)/g,'$1.$2').trim()
     .match(/^(?:(?:rear|private|back)\s+)?garden\s*[:( -]?\s*(?:(?:dimensions?|size|measures?|approx(?:imately)?)\s*[: -]?\s*)?(\d{1,2}(?:\.\d{1,2})?)\s*(?:m|metres?)?\s*(?:x|by)\s*(\d{1,2}(?:\.\d{1,2})?)\s*(?:m|metres?)\b/i);
   if(candidate){garden=candidate;break}
+ }
+ // Agency plans sometimes print imperial measurements with metric lengths in parentheses.
+ // Example: Garden Approximate 49'3 (15.00) x 16'5 (5.00)
+ if(!garden){
+  const block=String(original||'').replace(/[×✕]/g,'x').match(/\b(?:rear\s+|private\s+)?garden\s+(?:approx(?:imate)?\s+)?([\s\S]{0,120})/i);
+  if(block){
+   const pair=block[1].match(/\b\d{1,3}'\d{1,2}\s*\(\s*(\d{1,2}(?:\.\d{1,2})?)\s*\)\s*x\s*\d{1,3}'\d{1,2}\s*\(\s*(\d{1,2}(?:\.\d{1,2})?)\s*\)/i);
+   if(pair)garden=pair;
+  }
  }
  if(garden){
   const width=numeric(garden[1]),length=numeric(garden[2]),sqm=width*length;
@@ -66,10 +76,9 @@ export async function analyzeFloorplan({sb,property,photo}){
  const p=property;
  if(!p?.id||!(p.floorplans||[]).length)return {status:'not-needed'};
  const fingerprint=(p.floorplans||[])[0].path||(p.floorplans||[])[0].url;
- // The user-supplied Zoopla/Rightmove listing is the only automatic source of factual measurements.
- // Legacy cross-site plans remain viewable, but cannot silently overwrite property characteristics.
- if(!/\/source-plan-\d+\.(?:jpg|jpeg|png|webp)$/i.test(fingerprint||''))return {status:'legacy-plan-not-from-original-listing'};
- const key='hh-plan-ocr-v6:'+p.id+':'+fingerprint;
+ // Existing catalogue plans can be read directly from private Storage, avoiding unnecessary external listing requests.
+ // Newly imported plans are archived from the original listing by the Chrome importer.
+ const key='hh-plan-ocr-v9:'+p.id+':'+fingerprint;
  let last=0;try{last=Number(localStorage.getItem(key)||0)}catch{}
  if(last&&Date.now()-last<30*86400000)return {status:'already-checked'};
  const imageUrl=await photo(p.floorplans[0]);
