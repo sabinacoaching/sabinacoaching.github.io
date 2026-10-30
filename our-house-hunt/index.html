@@ -229,7 +229,7 @@ async function importHouse(raw){
  const floorplanCandidates=data.floorplans||[];
  const planChecks=[];
  const floorplans=await archive(floorplanCandidates,id,'source-plan',5,planChecks);
- const p={id,url,source:data.source,title:data.title||'',address:data.address||'',price:data.price??null,bedrooms:data.bedrooms??null,bathrooms:listingBathrooms(data),wc_count:data.wc_count??null,floors:listingFloors(data),floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:null,garden_description:data.garden_description||'',station_name:data.station_name||'',station_distance_miles:data.station_distance_miles??null,station_2_name:data.station_2_name||'',station_2_distance_miles:data.station_2_distance_miles??null,latitude:data.latitude??null,longitude:data.longitude??null,property_type:data.property_type||null,tenure:data.tenure||null,images,floorplans,import_diagnostics:{source:'original-listing',extension_version:data.extension_version||'unknown',status:data.floorplan_status||'unknown',candidates:floorplanCandidates.length,archived:floorplans.length,checks:planChecks,attempted_at:new Date().toISOString()},created_by:user.id,status:'saved'};
+ const p={id,url,source:data.source,title:data.title||'',address:data.address||'',price:data.price??null,bedrooms:data.bedrooms??null,bathrooms:listingBathrooms(data),wc_count:data.wc_count??null,floors:listingFloors(data),floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:null,garden_description:data.garden_description||'',station_name:'',station_distance_miles:null,station_2_name:'',station_2_distance_miles:null,latitude:null,longitude:null,property_type:data.property_type||null,tenure:data.tenure||null,images,floorplans,import_diagnostics:{source:'original-listing',extension_version:data.extension_version||'unknown',status:data.floorplan_status||'unknown',candidates:floorplanCandidates.length,archived:floorplans.length,checks:planChecks,attempted_at:new Date().toISOString()},created_by:user.id,status:'saved'};
  const r=await sb.from('properties').insert(p);
  if(r.error)throw r.error;
  report('House saved with '+images.length+' photographs. Completing location, stations and floor plan…');
@@ -252,7 +252,7 @@ async function enrichProperty(p){
  }
  const details={};
  p._floorplan_import={status:data.floorplan_status||'unknown',tabFound:!!data.floorplan_diagnostic?.tabFound,tabClicked:!!data.floorplan_diagnostic?.tabClicked,found:(data.floorplans||[]).length,archived:0,error:data.floorplan_diagnostic?.error||null};
- for(const key of ['bedrooms','floor_area_sqm','garden_description','station_name','station_distance_miles','station_2_name','station_2_distance_miles','latitude','longitude']){
+ for(const key of ['bedrooms','floor_area_sqm','garden_description']){
    if((p[key]==null||p[key]==='')&&data[key]!=null&&data[key]!=='')details[key]=data[key];
  }
  for(const [key,value] of [['bathrooms',listingBathrooms(data)],['floors',listingFloors(data)]]){
