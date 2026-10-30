@@ -13,10 +13,19 @@
 
 - `Export Excel` downloads a local, true `.xlsx` workbook without sending any export data to a third-party service. `Current table` contains visible, sorted/filtered rows; `Full data backup` contains ALL records from the loaded `properties` table, including archived/deleted, JSON metadata, comments and journey estimates. Photo and floor-plan paths are preserved, but the actual private Storage files are **not** embedded.
 - `Export PDF` opens a print-ready view of currently visible rows. In the browser print dialog, select `Save as PDF`. This is a browser-generated PDF, not an automatic server export.
-- Opening the catalogue, switching views and clicking Refresh **must remain read-only** for original listings, floor-plan OCR and transport route recalculation. Supabase database reads and signed photo URLs are still used to display the data; refresh polling every 30 seconds remains.
+- Opening the catalogue, switching views and clicking Refresh **must remain read-only** for original listings, floor-plan OCR and transport route recalculation. Supabase database reads and signed photo URLs are still used to display data. Automatic 30-second polling has been removed: reload property data only at sign-in, via the explicit Refresh button, or after a saved edit.
 - Automatic missing-detail enrichment and transport calculation should run only during the import session for a **new** property. Existing properties can be deliberately updated via the `Update listing data` button in the details dialog.
 - Version v41 remains the older checkpoint. A separate branch `house-hunt-before-export-2026-10-30` records the production state immediately before exports and read-only opening changes.
 - Export implementation: `our-house-hunt/export-tools.js`; attached by `our-house-hunt/index.html`. Table is still managed by `comparison.js`, with transport queue gates in `comparison.js` and `station-commutes.js`. Test Excel generation with Unicode and test the nonempty 13-column table after any changes.
+
+## Catalogue counters, archive and ordering (2026-10-30)
+
+- The headline count must show `homes.length houses · activeCount active` from **all** loaded property records, including archived/deleted in the total. When Stage or Search filters are active, add `N shown`. Never display only the filtered row count as the total.
+- An `Archived (N)` button toggles Stage between Archived and All active, alongside the existing Stage filter. Archived rows/cards show `Restore to active`, which changes only status to the blank (active) default and persists using the existing edit history.
+- `Move to…` in each active house row lets the user choose an exact 1-based position, including 10 to 1, in a **single** reorder RPC. Drag has additional edge auto-scroll for long lists; ↑ and ↓ move exactly one place. Reordering is enabled only with Stage=All active, Sort=My order and empty Search. Archived/deleted houses must never be included in the active ordering RPC.
+- There is no recurring 30-second property refresh. `Refresh` reads `properties` from Supabase, re-renders the local UI, and obtains any changes another user made. It does not refetch listing websites or recalculate routes. Opening the site performs one initial read. Changes after a save cause a read as needed.
+- As at the verification on 2026-10-30, the database had **21 total, 19 active, 2 archived** (Angel Mews and White Lodge Close). These statuses can change, so always derive the counter from live data, not from a hard-coded count.
+- The pre-change code is saved in branch `house-hunt-before-archive-reorder-2026-10-30` (ref `f950914d622a7879866837c7b4f045f1f93362b4`).
 
 ## Emergency diagnosis, without destructive changes
 
