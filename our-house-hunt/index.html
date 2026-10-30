@@ -135,7 +135,7 @@ async function importHouse(raw){
  const id=crypto.randomUUID();
  const images=await archive(data.images,id,'photo',24);
  if(!images.length)throw Error('Photographs could not be downloaded. House not added.');
- // The importer may return an ordinary photograph as a floor plan; downstream OCR validates content.
+ // Reject duplicated URLs; the extension's floor-plan classification still needs a separate visual validation step.
  const floorplanCandidates=(data.floorplans||[]).filter(u=>!(data.images||[]).includes(u));
  const floorplans=await archive(floorplanCandidates,id,'floorplan',5);
  const p={id,url,source:data.source,title:data.title||'',address:data.address||'',price:data.price||null,bedrooms:data.bedrooms??null,bathrooms:data.bathrooms??null,wc_count:data.wc_count??null,floors:data.floors??null,floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:data.garden_area_sqm??null,garden_description:data.garden_description||'',station_name:data.station_name||'',station_distance_miles:data.station_distance_miles??null,station_2_name:data.station_2_name||'',station_2_distance_miles:data.station_2_distance_miles??null,latitude:data.latitude??null,longitude:data.longitude??null,property_type:data.property_type||null,tenure:data.tenure||null,images,floorplans,created_by:user.id,status:'saved'};
