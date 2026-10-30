@@ -45,6 +45,18 @@ git diff -- our-house-hunt/
 
 This restores the entire House Hunt folder to the checkpoint, thereby losing any **later House Hunt code changes** if merged. For a single regression, restore only the affected file(s). Do **not** execute these commands automatically: confirm the chosen rollback target and the diffs.
 
+## Supabase data checkpoint created 2026-10-30
+
+A separate read-only-to-the-app snapshot exists in the **same Supabase project**, in private schema `house_hunt_backup`:
+- `properties_20261030_v41` (21)
+- `notes_20261030_v41` (0)
+- `members_20261030_v41` (2)
+- `station_candidates_20261030_v41` (147)
+- `pt_samples_20261030_v41` (120)
+- `journey_audit_20261030_v41` (63)
+
+Each count was verified against the original table at snapshot time. SQL schema privileges for `anon` and `authenticated` were checked and were both false. Do not alter the snapshot tables. Any data restore must be scoped and reviewed first to avoid overwriting newer valid user changes. **Private Storage photo bytes and Supabase Auth identities are not backed up by these SQL snapshots.**
+
 ## What backup does / does not cover
 
 The GitHub checkpoint preserves application code. It does NOT back up Supabase rows, Supabase Auth users, Storage image bytes, or future edits. Any database snapshot stored in the same Supabase project protects against many accidental row edits but not deletion/loss of the entire project. A separate, secure external export is required for disaster recovery, including private Storage files.
