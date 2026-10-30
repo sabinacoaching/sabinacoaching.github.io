@@ -184,12 +184,22 @@ async function enrichWalkingStations(p){
  if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<49||lat>61||lon< -9||lon>3||p.latitude==null||p.longitude==null){
    const query=String(p.address||'').replace(/^\s*\d+\s*bed(?:room)?s?\s+.*?\s+(?:for sale|to rent)\s*/i,'').replace(/\s*[-|]\s*(?:Zoopla|Rightmove).*$/i,'').trim();
    if(query.length<8)return false;
-   const u='https://nominatim.openstreetmap.org/search?format=json&addressdetails=0&limit=1&countrycodes=gb&q='+encodeURIComponent(query+', UK');
-   const response=await fetch(u,{headers:{Accept:'application/json'}});
-   if(!response.ok)throw Error('Map geocoding '+response.status);
-   const addresses=await response.json();
-   const coordinate=addresses?.[0];
-   if(!coordinate)return false;
+   // Nominatim frequently returns no result when a street name is combined with only an outcode (e.g. TW2).
+   // Retry the same street without the incomplete postcode; never substitute a postcode-area centroid.
+   const withoutOutcode=query.replace(/\\s+[A-Z]{1,2}\\d[A-Z\\d]?(?:\\s+\\d[A-Z]{2})?\\s*$/i,'').trim();
+   const candidates=[query,...(withoutOutcode!==query?[withoutOutcode]:[])];
+   let coordinate=null,lastGeoError=null;
+   for(const candidate of candidates){
+     try{
+       const u='https://nominatim.openstreetmap.org/search?format=json&addressdetails=0&limit=1&countrycodes=gb&q='+encodeURIComponent(candidate+', UK');
+       const response=await fetch(u,{headers:{Accept:'application/json'}});
+       if(!response.ok)throw Error('Map geocoding '+response.status);
+       const addresses=await response.json();
+       if(addresses?.[0]){coordinate=addresses[0];break}
+     }catch(e){lastGeoError=e;console.warn('Geocoding candidate unavailable',candidate,e)}
+     await routeDelay(1200);
+   }
+   if(!coordinate){if(lastGeoError)throw lastGeoError;return false;}
    lat=Number(coordinate.lat);lon=Number(coordinate.lon);
    if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<49||lat>61||lon< -9||lon>3)return false;
    // Persist the map point *before* querying stations: a routing failure must not discard a successful geocode.
