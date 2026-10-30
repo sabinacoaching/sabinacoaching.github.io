@@ -1,4 +1,6 @@
+import {setupStationAccess} from './station-commutes.js?v=1';
 export function setupComparison({sb,photo,openHouse,openPhotoBrowser}){
+const stationAccess=setupStationAccess({sb});
 const $=id=>document.getElementById(id),node=(tag,cls='',content)=>{const x=document.createElement(tag);x.className=cls;if(content!==undefined)x.textContent=content;return x};
 const statuses={saved:'Saved',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold'};
 const labels=['House','Price','Bedrooms','Bathrooms / WC','Floors','Total floor area','Garden','Nearest station','Journey times','Sabina comments','David comments','Viewing status','Viewing date'];
@@ -138,8 +140,12 @@ function render(list){
   garden.append(labelledEditor(p,'Size (m²)','garden_area_sqm','number'),labelledEditor(p,'Description','garden_description','textarea'));
   tr.append(cell(garden));
   const station=node('div','hh-stack');
-  station.append(labelledEditor(p,'Station 1','station_name'),labelledEditor(p,'Walking miles','station_distance_miles','number'));
-  station.append(labelledEditor(p,'Station 2','station_2_name'),labelledEditor(p,'Walking miles','station_2_distance_miles','number'));
+  for(let i=0;i<2;i++){
+   const entry=node('div','hh-station-entry');
+   entry.append(labelledEditor(p,'Station '+(i+1),i===0?'station_name':'station_2_name'));
+   entry.append(stationAccess.attach(p,i));
+   station.append(entry);
+  }
   tr.append(cell(station));
   tr.append(cell(travelCell(p)));
   tr.append(cell(editor(p,'comment_sabina','textarea')));
