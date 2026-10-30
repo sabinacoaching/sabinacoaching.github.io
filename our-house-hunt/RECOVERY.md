@@ -27,6 +27,17 @@
 - As at the verification on 2026-10-30, the database had **21 total, 19 active, 2 archived** (Angel Mews and White Lodge Close). These statuses can change, so always derive the counter from live data, not from a hard-coded count.
 - The pre-change code is saved in branch `house-hunt-before-archive-reorder-2026-10-30` (ref `f950914d622a7879866837c7b4f045f1f93362b4`).
 
+## 2026-10-30 v47: confirmed source-level remedies for stale tabs, filtering and drag
+
+- v47 is identified by a visible `v47` badge next to the signed-in user's name. If a user sees `Original Listing Checks` or old counters and does not see `v47`, their existing tab is executing older JavaScript; a changed GitHub commit cannot modify an already loaded browser tab. Open the published URL with `?v=47` or reload the tab. The stable page alone may remain loaded and stale.
+- The comparison table has a multi-select `Viewing status ▾ Filter` menu **in the header of the Viewing status column**. `All active` and `All statuses` shortcuts, one checkbox per status, and Apply/Cancel. It can include archived and deleted records. The existing top Stage and Archived controls also work and reset the custom status selection when used.
+- The page count is **`N shown · M total`**, not active-only totals. E.g. 19 shown · 21 total. Archived records remain counted in total.
+- Rows in the table display `#1`, `#2`, etc. reflecting current visible order. `Move to…` remains available when no stage/status/search filter is in effect and My order sort is selected.
+- Drag-to-reorder auto-scrolls the **table scroll container** continuously while the cursor remains near its top or bottom edge. Drop onto the desired row; users need not move a row only one position at a time.
+- No 30-second database polling; opening the app fetches saved Supabase data once, manual Refresh fetches it again, and saves may fetch as necessary. In existing tabs that still run legacy code, auto-checking continues until a page reload. The new version badge is the first diagnostic step.
+- Safe pre-change branch: `house-hunt-before-status-filter-v46-2026-10-30` at commit `b40071a1472d55c09f1e2375cc25e3321c81d826`.
+- Changes verified by JavaScript syntax checks, a simulated 19/21 active/archive status filter, table rendering, and drag-edge scroll. Full live signed-in browser verification remains outstanding.
+
 ## Emergency diagnosis, without destructive changes
 
 1. Read THIS document and the **live files and recent commits**, not a stale chat summary. Use the GitHub connector on the correct repo/folder. Check `our-house-hunt/index.html`, `comparison.js`, `comparison.css`, `station-commutes.js` and relevant imported modules.
