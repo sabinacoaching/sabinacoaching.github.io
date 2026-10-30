@@ -1,6 +1,6 @@
 import {setupStationAccess} from './station-commutes.js?v=15';
-export function setupComparison({sb,history,photo,openHouse,openPhotoBrowser,onReorder,canReorder,onStatusChange}){
-const stationAccess=setupStationAccess({sb,history});
+export function setupComparison({sb,history,photo,openHouse,openPhotoBrowser,onReorder,canReorder,onStatusChange,shouldAutoCalculate}){
+const stationAccess=setupStationAccess({sb,history,shouldAutoCalculate});
 const $=id=>document.getElementById(id),node=(tag,cls='',content)=>{const x=document.createElement(tag);x.className=cls;if(content!==undefined)x.textContent=content;return x};
 const statuses={'':'—',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold',archived:'Archive (hide)',deleted:'Delete (move to trash)'};
 const labels=['House','Price','Bedrooms','Bathrooms / WC','Floors','Total floor area','Garden','Nearest station','Journey times','Sabina comments','David comments','Viewing status','Viewing date'];
@@ -125,7 +125,7 @@ function travelCell(p){
  }
  wrapper.append(node('small','hh-trip-help','Arrival time · typical Tuesday · public transport'));
  journeyViews.set(p.id,view);
- if(p.latitude!=null&&p.longitude!=null&&!journeyFresh(p)&&!travelDestinations.some(d=>p.journey_estimates?.[d.id]?.manual_override===true)&&!queuedJourneys.has(p.id)&&Date.now()>(journeyRetryAfter.get(p.id)||0)){
+ if(shouldAutoCalculate?.(p)&&p.latitude!=null&&p.longitude!=null&&!journeyFresh(p)&&!travelDestinations.some(d=>p.journey_estimates?.[d.id]?.manual_override===true)&&!queuedJourneys.has(p.id)&&Date.now()>(journeyRetryAfter.get(p.id)||0)){
    queuedJourneys.add(p.id);journeyQueue.push(p);void drainJourneyQueue();
  }
  if(p.latitude==null||p.longitude==null)for(const d of travelDestinations)view[d.id].textContent='Map point needed';
