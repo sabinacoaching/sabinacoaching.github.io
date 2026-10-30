@@ -175,6 +175,28 @@ async function archive(urls,id,prefix='photo',limit=10){
 }
 
 
+/* Read only counts explicitly stated by the listing; never infer an extra bathroom from room photographs. */
+function listingBathrooms(data){
+ const raw=Number(data.bathrooms);
+ if(data.bathrooms!=null&&data.bathrooms!==''&&Number.isInteger(raw)&&raw>=1&&raw<=8)return raw;
+ const m=String(data.garden_description||'').match(/\b(one|two|three|four|five|[1-8])\s+(?:bathrooms?|baths?)\b/i);
+ const nums={one:1,two:2,three:3,four:4,five:5};
+ return m?(nums[m[1].toLowerCase()]||Number(m[1])):null;
+}
+function listingFloors(data){
+ const raw=Number(data.floors);
+ if(data.floors!=null&&data.floors!==''&&Number.isInteger(raw)&&raw>=1&&raw<=6)return raw;
+ const m=String(data.garden_description||'').match(/\b(?:arranged|spread|set|laid out)\s+(?:over|across|on)\s+(one|two|three|four|[1-4])\s+(?:floors?|storeys?|stories)\b/i);
+ const nums={one:1,two:2,three:3,four:4};
+ return m?(nums[m[1].toLowerCase()]||Number(m[1])):null;
+}
+function listingExtraWC(data){
+ const raw=Number(data.wc_count);
+ if(data.wc_count!=null&&data.wc_count!==''&&Number.isInteger(raw)&&raw>=0&&raw<=6)return raw;
+ const description=String(data.garden_description||'');
+ return /\b(?:downstairs|separate|guest)\s+(?:w\.?c\.?|toilet|cloakroom)\b/i.test(description)?1:0;
+}
+
 /* Prefer the explicitly displayed price in the source page title over a conflicting extracted value. */
 function listingPrice(data){
  const match=String(data.title||'').match(/£\s*(\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d{6,7})/);
@@ -214,7 +236,7 @@ async function importHouse(raw){
  // Reject duplicated URLs; the extension's floor-plan classification still needs a separate visual validation step.
  const floorplanCandidates=(data.floorplans||[]).filter(u=>!(data.images||[]).includes(u));
  const floorplans=await archive(floorplanCandidates,id,'floorplan',5);
- const p={id,url,source:data.source,title:data.title||'',address:data.address||'',price:listingPrice(data),bedrooms:data.bedrooms??null,bathrooms:data.bathrooms??null,wc_count:data.wc_count??null,floors:data.floors??null,floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:verifiedGardenArea(data),garden_description:data.garden_description||'',station_name:data.station_name||'',station_distance_miles:data.station_distance_miles??null,station_2_name:data.station_2_name||'',station_2_distance_miles:data.station_2_distance_miles??null,latitude:data.latitude??null,longitude:data.longitude??null,property_type:data.property_type||null,tenure:data.tenure||null,images,floorplans,created_by:user.id,status:'saved'};
+ const p={id,url,source:data.source,title:data.title||'',address:data.address||'',price:listingPrice(data),bedrooms:data.bedrooms??null,bathrooms:listingBathrooms(data),wc_count:listingExtraWC(data),floors:listingFloors(data),floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:verifiedGardenArea(data),garden_description:data.garden_description||'',station_name:data.station_name||'',station_distance_miles:data.station_distance_miles??null,station_2_name:data.station_2_name||'',station_2_distance_miles:data.station_2_distance_miles??null,latitude:data.latitude??null,longitude:data.longitude??null,property_type:data.property_type||null,tenure:data.tenure||null,images,floorplans,created_by:user.id,status:'saved'};
  const r=await sb.from('properties').insert(p);
  if(r.error)throw r.error;
  report('House saved with '+images.length+' photographs. Completing location, stations and floor plan…');
@@ -229,8 +251,11 @@ async function importHouse(raw){
 async function enrichProperty(p){
  const data=await extension('IMPORT_URL',{url:p.url},70000);
  const details={};
- for(const key of ['bedrooms','bathrooms','wc_count','floors','floor_area_sqm','garden_description','station_name','station_distance_miles','station_2_name','station_2_distance_miles','latitude','longitude']){
+ for(const key of ['bedrooms','floor_area_sqm','garden_description','station_name','station_distance_miles','station_2_name','station_2_distance_miles','latitude','longitude']){
    if((p[key]==null||p[key]==='')&&data[key]!=null&&data[key]!=='')details[key]=data[key];
+ }
+ for(const [key,value] of [['bathrooms',listingBathrooms(data)],['wc_count',listingExtraWC(data)],['floors',listingFloors(data)]]){
+  if((p[key]==null||p[key]==='')&&value!=null)details[key]=value;
  }
  if(p.garden_area_sqm==null){const garden=verifiedGardenArea(data);if(garden!=null)details.garden_area_sqm=garden}
  if((!p.floorplans||!p.floorplans.length)&&(data.floorplans||[]).length){
