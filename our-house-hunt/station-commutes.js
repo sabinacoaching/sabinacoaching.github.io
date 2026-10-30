@@ -1,6 +1,6 @@
 // Station times are calculated once by TfL and saved in the property record.
 // A single walking link opens Google Maps with the destination's station name.
-export function setupStationAccess({sb}){
+export function setupStationAccess({sb,history}){
  const queue=[],pending=new Set(),attempted=new Set(),views=new Map();let working=false;
  const el=(tag,cls='',content='')=>{const e=document.createElement(tag);e.className=cls;e.textContent=content;return e};
  const names=p=>[String(p.station_name||'').trim(),String(p.station_2_name||'').trim()];
@@ -47,9 +47,56 @@ export function setupStationAccess({sb}){
   }
   working=false;
  }
+ function editLine(p,i,kind,host){
+  if(host.querySelector('input'))return;
+  const orig=host.textContent,which=names(p)[i],cache=p.station_commutes?.results?.[i]||{},manual=p.station_commutes?.google_verified?.[which]||{};
+  const originalMile=p[i===0?'station_distance_miles':'station_2_distance_miles'];
+  const values=kind==='walking'?
+     [['walking_miles','Miles',manual.walking_miles??cache.walking_miles??originalMile],
+      ['walking_minutes','Minutes',manual.walking_minutes??cache.walking_minutes]]:
+     [['pt_minutes','Minutes',manual.pt_minutes??cache.avg_minutes]];
+  const box=document.createElement('span');box.className='hh-route-inline-edit';
+  const fields=[];
+  for(const [key,label,old] of values){
+    const wrap=document.createElement('label'),small=document.createElement('small'),input=document.createElement('input');
+    small.textContent=label;input.type='number';input.min='0';input.step='any';input.value=old??'';
+    input.setAttribute('aria-label',label+' to '+which);
+    wrap.append(small,input);box.append(wrap);fields.push([key,input]);
+  }
+  const save=document.createElement('button'),cancel=document.createElement('button');
+  save.type='button';save.textContent='Save';save.className='hh-route-save';
+  cancel.type='button';cancel.textContent='Cancel';cancel.className='hh-route-cancel';
+  const revert=()=>{host.replaceChildren();host.textContent=orig};
+  save.onclick=async()=>{
+    const next={...(p.station_commutes?.google_verified?.[which]||{}),source:'manual',updated_at:new Date().toISOString()};
+    for(const [key,input] of fields){
+     const n=input.value.trim()===''?null:Number(input.value);
+     if(n!=null&&(!Number.isFinite(n)||n<0)){alert('Enter a valid number');return}
+     next[key]=n;
+    }
+    save.disabled=true;
+    const changes={station_commutes:{...(p.station_commutes||{}),google_verified:{...(p.station_commutes?.google_verified||{}),[which]:next}}};
+    if(kind==='walking')changes[i===0?'station_distance_miles':'station_2_distance_miles']=next.walking_miles;
+    const r=await history.save(p,changes);
+    if(r.error){alert('Could not save: '+r.error.message);save.disabled=false;return}
+    host.replaceChildren();render(p,i);
+  };
+  cancel.onclick=revert;
+  box.append(save,cancel);host.replaceChildren(box);
+  const input=fields[0]?.[1];input?.focus();input?.select();
+  box.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();save.click()}if(e.key==='Escape'){e.preventDefault();cancel.click()}});
+ }
  function attach(p,i){
-  const box=el('div','hh-station-access'),walk=el('div','hh-station-walk'),link=el('a','hh-station-google','Google Maps walking ↗'),pt=el('div','hh-station-pt');
+  const box=el('div','hh-station-access'),walk=el('div','hh-station-walk'),
+    link=el('a','hh-station-google','Google Maps walking ↗'),pt=el('div','hh-station-pt');
   link.target='_blank';link.rel='noopener noreferrer';
+  walk.title='Click to edit walking miles and minutes';walk.classList.add('hh-route-editable');
+  pt.title='Click to edit PT minutes';pt.classList.add('hh-route-editable');
+  walk.tabIndex=0;pt.tabIndex=0;walk.setAttribute('role','button');pt.setAttribute('role','button');
+  walk.onclick=()=>editLine(p,i,'walking',walk);
+  pt.onclick=()=>editLine(p,i,'pt',pt);
+  walk.onkeydown=e=>{if(e.target===walk&&(e.key==='Enter'||e.key===' ')){e.preventDefault();editLine(p,i,'walking',walk)}};
+  pt.onkeydown=e=>{if(e.target===pt&&(e.key==='Enter'||e.key===' ')){e.preventDefault();editLine(p,i,'pt',pt)}};
   box.append(walk,link,pt);
   views.set(p.id+':'+i,{walk,link,pt});render(p,i);
   if(p.latitude!=null&&p.longitude!=null&&names(p).every(Boolean)&&!completed(p)&&!pending.has(p.id)&&!attempted.has(p.id)){
