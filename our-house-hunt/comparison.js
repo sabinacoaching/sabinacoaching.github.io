@@ -150,7 +150,7 @@ function render(list){
   const details=node('button','hh-house-details','Details');
   details.type='button';details.onclick=()=>openHouse(p);
   details.style.cssText='display:block;margin-top:6px;padding:5px 10px;font-size:12px;background:#fff;color:#315e50;border-color:#cbd7d1';
-  house.append(photos,address,link,details);
+  house.append(photos,address,link);
   if(canReorder?.()){
     const tools=node('div','hh-move-controls'),grip=node('button','hh-drag-handle','↕ Drag');
     grip.type='button';grip.draggable=true;grip.title='Drag to place above another house';
@@ -164,7 +164,7 @@ function render(list){
     tr.ondragleave=()=>tr.classList.remove('hh-drop-target');
     tr.ondrop=e=>{e.preventDefault();tr.classList.remove('hh-drop-target');const source=dragId||e.dataTransfer.getData('text/plain');dragId=null;if(source&&source!==p.id)void onReorder?.(source,p.id)};
   }
-
+  house.append(details);
   tr.append(cell(house));
   const price=labelledEditor(p,'£','price','number');price.classList.add('hh-price-editor');tr.append(cell(price));
   tr.append(cell(editor(p,'bedrooms','number')));
@@ -187,15 +187,29 @@ function render(list){
   const station=node('div','hh-stack');
   for(let i=0;i<3;i++){
    if(i===2&&!p.station_3_name)continue;
-   const entry=node('div','hh-station-entry');
-   entry.append(labelledEditor(p,'Station '+(i+1),i===0?'station_name':i===1?'station_2_name':'station_3_name'));
    const name=i===0?p.station_name:i===1?p.station_2_name:p.station_3_name;
-   entry.prepend(node('span','hh-station-kind',/underground|tube|ealing common/i.test(name||'')?'Ⓜ Underground':/tram/i.test(name||'')?'🚋 Tram':'🚆 Rail'));
-   entry.append(stationAccess.attach(p,i));
-
-   station.append(entry);
+   const entry=node('div','hh-station-entry');
+   const edit=labelledEditor(p,'Station '+(i+1),i===0?'station_name':i===1?'station_2_name':'station_3_name');
+   const service=p.station_commutes?.results?.[i]?.station_type||'';
+   const isTube=service==='tube'||/underground|tube|ealing common/i.test(name||'');
+   const isOverground=service==='overground'||/^(Wandsworth Road|Clapham High Street|Imperial Wharf|Gunnersbury|Richmond)$/i.test(name||'');
+   const isTram=service==='tram'||/tram/i.test(name||'');
+   if(isTube||isOverground||isTram){
+    const symbol=node('span','hh-kind-inline '+(isTube?'hh-kind-tube':isOverground?'hh-kind-overground':'hh-kind-tram'),isTube?'Ⓜ':isOverground?'◎':'▱');
+    symbol.title=isTube?'Underground':isOverground?'London Overground':'Tram';
+    edit.append(symbol);edit.classList.add('hh-field-has-kind');
+   }
+   entry.append(edit,stationAccess.attach(p,i));
+   if(i===2){
+    const collapse=node('details','hh-third-collapse'),summary=node('summary','','3rd: '+name);
+    collapse.append(summary,entry);station.append(collapse);
+   }else station.append(entry);
   }
-  if(!p.station_3_name){const add=node('button','hh-add-station','+ Third station');add.type='button';add.onclick=()=>{const n=window.prompt('Third station name');if(n)void save(p,'station_3_name',n.trim(),null).then(()=>onStatusChange?.())};station.append(add)}
+  if(!p.station_3_name){
+   const add=node('button','hh-add-station','+ 3rd station');add.type='button';
+   add.onclick=()=>{const n=window.prompt('Third station name');if(n)void save(p,'station_3_name',n.trim(),null).then(()=>onStatusChange?.())};
+   station.append(add);
+  }
   tr.append(cell(station));
   tr.append(cell(travelCell(p)));
   tr.append(cell(editor(p,'comment_sabina','textarea')));
