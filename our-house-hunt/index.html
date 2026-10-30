@@ -34,10 +34,10 @@ dialog.hh-photo-viewer[open]{display:flex;flex-direction:column}
 .gallery img{cursor:zoom-in}
 @media(max-width:600px){.hh-photo-stage{gap:3px;padding:4px}.hh-photo-stage img{max-width:calc(100% - 78px)}.hh-photo-viewer .hh-photo-prev,.hh-photo-viewer .hh-photo-next{flex-basis:36px;min-width:36px;padding:5px}}
 </style>
-<link rel="stylesheet" href="./comparison.css?v=20">
+<link rel="stylesheet" href="./comparison.css?v=21">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'">
 </head><body>
-<header class="top"><div class="brand">⌂ &nbsp;<span>Our House Hunt</span></div><div class="topright"><strong id="who"></strong><button id="refresh" class="secondary" hidden>Refresh</button><button id="changePassword" class="secondary" hidden>Change password</button><button id="logout" class="secondary" hidden>Sign out</button></div></header>
+<header class="top"><div class="brand">⌂ &nbsp;<span>Our House Hunt</span></div><div class="topright"><strong id="who"></strong><span id="hhVersion" title="Current House Hunt site version" style="font-size:11px;color:#72817f">v46</span><button id="refresh" class="secondary" hidden>Refresh</button><button id="changePassword" class="secondary" hidden>Change password</button><button id="logout" class="secondary" hidden>Sign out</button></div></header>
 <main>
 <section id="login" class="panel login" hidden>
 <h1>Welcome home</h1><p>Your shared shortlist, notes and viewings.</p>
@@ -82,7 +82,7 @@ dialog.hh-photo-viewer[open]{display:flex;flex-direction:column}
 </dialog>
 <script type="module">
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.8';
-import {setupComparison} from './comparison.js?v=45';
+import {setupComparison} from './comparison.js?v=46';
 import {setupExports} from './export-tools.js?v=1';
 import {createEditHistory} from './edit-history.js?v=2';
 import {analyzeFloorplan,inspectFloorplanImage} from './floorplan-ocr.js?v=14';
@@ -90,6 +90,20 @@ const sb=createClient('https://ficnuovumurmhzdujjvj.supabase.co','sb_publishable
 const $=id=>document.getElementById(id);
 const labels={'':'No status',archived:'Archived',deleted:'Deleted',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold'};
 let user=null,people={},homes=[],visibleHomes=[],selected=null;
+let viewingSelections=null;
+const allActiveStatuses=['','interested','viewing_booked','viewed','shortlisted','rejected','under_offer_sold'];
+function selectedViewingStatuses(){
+ if(viewingSelections!==null)return [...viewingSelections];
+ const stage=$('stageFilter').value;
+ return stage==='all'?allActiveStatuses.slice():[stage];
+}
+function applyViewingStatuses(statuses){
+ const values=[...new Set(statuses)];
+ if(values.length===allActiveStatuses.length&&allActiveStatuses.every(x=>values.includes(x)))viewingSelections=null;
+ else viewingSelections=new Set(values);
+ $('stageFilter').value='all';
+ render();
+}
 const pendingJourneyImportIds=new Set();
 const photoCache=new Map();
 let activePhotoProperty=null,activePhotoIndex=0,photoRequest=0;
@@ -481,7 +495,7 @@ async function startAutoFill(){
 }
 let reorderBusy=false;
 async function reorderHouses(dragId,targetId,step=0,exactPosition=null){
- if($('sort').value!=='manual'||$('stageFilter').value!=='all'||$('search').value.trim()){report('For drag sorting, select My order, All active and clear Search.',true);return}
+ if($('sort').value!=='manual'||$('stageFilter').value!=='all'||viewingSelections!==null||$('search').value.trim()){report('To rearrange: select My order, All active and clear Search or Viewing status filters.',true);return}
  const active=homes.filter(p=>p.status!=='archived'&&p.status!=='deleted').sort((a,b)=>Number(a.sort_order??0)-Number(b.sort_order??0)||(new Date(b.created_at)-new Date(a.created_at)));
  const source=active.findIndex(p=>p.id===dragId),destination=active.findIndex(p=>p.id===targetId);
  if(source<0||destination<0||reorderBusy)return;
@@ -509,14 +523,17 @@ async function restoreHouse(p){
  if(r.error){report('Could not restore house: '+r.error.message,true);return}
  await refresh();report('Restored '+(p.address||'house')+' to active houses.');
 }
-function render(){let rows=homes.filter(p=>(($('stageFilter').value==='all'?p.status!=='archived'&&p.status!=='deleted':p.status===$('stageFilter').value))&&(!$('search').value.trim()||(p.address+' '+p.title).toLowerCase().includes($('search').value.trim().toLowerCase())));if($('sort').value==='manual')rows.sort((a,b)=>Number(a.sort_order??0)-Number(b.sort_order??0)||(new Date(b.created_at)-new Date(a.created_at)));if($('sort').value==='price_asc')rows.sort((a,b)=>(a.price??Infinity)-(b.price??Infinity));if($('sort').value==='price_desc')rows.sort((a,b)=>(b.price??0)-(a.price??0));
+function render(){let rows=homes.filter(p=>(
+ (viewingSelections!==null?viewingSelections.has(p.status||''):($('stageFilter').value==='all'?p.status!=='archived'&&p.status!=='deleted':p.status===$('stageFilter').value))
+ &&(!$('search').value.trim()||((p.address||'')+' '+(p.title||'')).toLowerCase().includes($('search').value.trim().toLowerCase()))
+ ));if($('sort').value==='manual')rows.sort((a,b)=>Number(a.sort_order??0)-Number(b.sort_order??0)||(new Date(b.created_at)-new Date(a.created_at)));if($('sort').value==='price_asc')rows.sort((a,b)=>(a.price??Infinity)-(b.price??Infinity));if($('sort').value==='price_desc')rows.sort((a,b)=>(b.price??0)-(a.price??0));
 const numeric=(v)=>v==null||v===''?null:Number(v);
 const nearest=(p)=>{const ds=[p.station_distance_miles,p.station_2_distance_miles,p.station_3_distance_miles].map(numeric).filter(v=>Number.isFinite(v)&&v>=0);return ds.length?Math.min(...ds):null};
 const sortNumeric=(measure,asc)=>rows.sort((a,b)=>{const av=measure(a),bv=measure(b);if(av==null||!Number.isFinite(av))return bv==null||!Number.isFinite(bv)?0:1;if(bv==null||!Number.isFinite(bv))return -1;return asc?av-bv:bv-av});
 if($('sort').value==='area_desc')sortNumeric(p=>numeric(p.floor_area_sqm),false);
 if($('sort').value==='area_asc')sortNumeric(p=>numeric(p.floor_area_sqm),true);
 if($('sort').value==='station_asc')sortNumeric(nearest,true);
-if($('sort').value==='station_desc')sortNumeric(nearest,false);visibleHomes=rows.slice();const activeCount=homes.filter(x=>x.status!=='archived'&&x.status!=='deleted').length;const archiveCount=homes.filter(x=>x.status==='archived').length;const filtered=$('stageFilter').value!=='all'||!!$('search').value.trim();txt('count',homes.length+' houses · '+activeCount+' active'+(filtered?' · '+rows.length+' shown':''));$('archiveToggle').textContent=$('stageFilter').value==='archived'?'Back to active':'Archived ('+archiveCount+')';$('empty').hidden=!!rows.length;$('cards').replaceChildren();for(const p of rows){const card=document.createElement('article');card.className='card';card.tabIndex=0;const frame=document.createElement('div');frame.className='photo';frame.textContent='⌂';photo((p.images||[])[0]).then(u=>{if(!u)return;const im=document.createElement('img');im.src=u;im.alt='House';im.onerror=()=>{frame.textContent='Photo unavailable'};frame.replaceChildren(im);frame.onclick=e=>{e.stopPropagation();openPhotoBrowser(p,0)}});const body=document.createElement('div');body.className='cardtext';for(const [cl,value] of [['address',p.address||p.title||'Address unavailable'],['price',fmt(p.price)],['facts',[p.bedrooms?p.bedrooms+' bedrooms':'',p.bathrooms?p.bathrooms+' bathrooms':'',p.source].filter(Boolean).join(' · ')]]){const d=document.createElement('div');d.className=cl;d.textContent=value;body.appendChild(d)}const foot=document.createElement('div');foot.className='cardfoot';const stage=document.createElement('span');stage.className='pill';stage.textContent=labels[p.status]||p.status;const date=document.createElement('span');date.textContent=new Date(p.created_at).toLocaleDateString('en-GB');foot.append(stage,date);body.append(foot);
+if($('sort').value==='station_desc')sortNumeric(nearest,false);visibleHomes=rows.slice();const archiveCount=homes.filter(x=>x.status==='archived').length;const archiveOnly=viewingSelections?.size===1&&viewingSelections.has('archived');txt('count',rows.length+' shown · '+homes.length+' total');$('archiveToggle').textContent=$('stageFilter').value==='archived'||archiveOnly?'Back to active':'Archived ('+archiveCount+')';$('empty').hidden=!!rows.length;$('cards').replaceChildren();for(const p of rows){const card=document.createElement('article');card.className='card';card.tabIndex=0;const frame=document.createElement('div');frame.className='photo';frame.textContent='⌂';photo((p.images||[])[0]).then(u=>{if(!u)return;const im=document.createElement('img');im.src=u;im.alt='House';im.onerror=()=>{frame.textContent='Photo unavailable'};frame.replaceChildren(im);frame.onclick=e=>{e.stopPropagation();openPhotoBrowser(p,0)}});const body=document.createElement('div');body.className='cardtext';for(const [cl,value] of [['address',p.address||p.title||'Address unavailable'],['price',fmt(p.price)],['facts',[p.bedrooms?p.bedrooms+' bedrooms':'',p.bathrooms?p.bathrooms+' bathrooms':'',p.source].filter(Boolean).join(' · ')]]){const d=document.createElement('div');d.className=cl;d.textContent=value;body.appendChild(d)}const foot=document.createElement('div');foot.className='cardfoot';const stage=document.createElement('span');stage.className='pill';stage.textContent=labels[p.status]||p.status;const date=document.createElement('span');date.textContent=new Date(p.created_at).toLocaleDateString('en-GB');foot.append(stage,date);body.append(foot);
  if(p.status==='archived'){
   const restore=document.createElement('button');
   restore.type='button';restore.textContent='Restore to active';restore.className='hh-restore-house';
@@ -592,8 +609,8 @@ $('loginForm').onsubmit=async e=>{e.preventDefault();txt('loginError','');const 
 $('logout').onclick=async()=>{await sb.auth.signOut();location.reload()};
 $('refresh').onclick=async()=>{await refresh();report('Saved data refreshed from Supabase. No original listings checked.');};
 $('importForm').onsubmit=async e=>{e.preventDefault();$('importButton').disabled=true;try{await importHouse($('urlInput').value.trim());$('urlInput').value=''}catch(err){report(err.message,true)}finally{$('importButton').disabled=false}};
-for(const id of ['stageFilter','sort','search'])$(id).addEventListener(id==='search'?'input':'change',render);
-$('archiveToggle').onclick=()=>{$('stageFilter').value=$('stageFilter').value==='archived'?'all':'archived';$('search').value='';render();};
+for(const id of ['stageFilter','sort','search'])$(id).addEventListener(id==='search'?'input':'change',id==='stageFilter'?()=>{viewingSelections=null;render()}:render);
+$('archiveToggle').onclick=()=>{const inArchive=$('stageFilter').value==='archived'||viewingSelections?.size===1&&viewingSelections.has('archived');viewingSelections=null;$('stageFilter').value=inArchive?'all':'archived';$('search').value='';render();};
 $('close').onclick=()=>$('dialog').close();
 $('save').onclick=async()=>{if(!selected)return;const payload={address:$('editAddress').value.trim(),price:$('editPrice').value?Number($('editPrice').value):null,bedrooms:$('editBeds').value?Number($('editBeds').value):null,bathrooms:$('editBaths').value?Number($('editBaths').value):null,status:$('editStage').value,viewing_at:$('editViewing').value?new Date($('editViewing').value).toISOString():null,...enhancements.edited()};if(payload.status==='deleted'&&!confirm('Move this house to Deleted?'))return;const overrides={...(selected.manual_overrides||{})};for(const [k,v] of Object.entries(payload)){if(String(selected[k]??'')!==String(v??''))overrides[k]=true;}payload.manual_overrides=overrides;const r=await history.save(selected,payload);if(r.error){alert(r.error.message);return}await refresh();$('dialog').close()};
 $('enrich').onclick=updateFromListing;
@@ -626,7 +643,7 @@ $('floorPlanFile').onchange=async()=>{
  finally{button.disabled=false;button.textContent='Upload floor plan'}
 };
 const history=createEditHistory({sb,onRestored:async()=>{const wasOpen=$('dialog').open;if(wasOpen)$('dialog').close();await refresh();if(wasOpen&&selected)await openHouse(selected)}});
-const enhancements=setupComparison({sb,history,photo,openHouse,openPhotoBrowser,onReorder:reorderHouses,canReorder:()=> $('sort').value==='manual'&&$('stageFilter').value==='all'&&!$('search').value.trim(),onStatusChange:async()=>{await refresh()},shouldAutoCalculate:p=>pendingJourneyImportIds.has(p.id),onRestore:restoreHouse});
+const enhancements=setupComparison({sb,history,photo,openHouse,openPhotoBrowser,onReorder:reorderHouses,canReorder:()=> viewingSelections===null&&$('sort').value==='manual'&&$('stageFilter').value==='all'&&!$('search').value.trim(),getStatusSelection:selectedViewingStatuses,onStatusFilterChange:applyViewingStatuses,onStatusChange:async()=>{await refresh()},shouldAutoCalculate:p=>pendingJourneyImportIds.has(p.id),onRestore:restoreHouse});
 setupExports({getVisible:()=>visibleHomes.slice(),getAll:()=>homes.slice()});
 const session=await sb.auth.getSession();user=session.data.session?.user||null;if(user){await show();}else $('login').hidden=false;
 // No automatic polling: properties are read at sign-in and upon explicit Refresh or a saved edit.
