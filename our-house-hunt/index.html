@@ -175,6 +175,15 @@ async function archive(urls,id,prefix='photo',limit=10){
 }
 
 
+/* Prefer the explicitly displayed price in the source page title over a conflicting extracted value. */
+function listingPrice(data){
+ const match=String(data.title||'').match(/£\s*(\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d{6,7})/);
+ const titlePrice=match?Number(match[1].replace(/,/g,'')):null;
+ if(Number.isFinite(titlePrice)&&titlePrice>=100000&&titlePrice<=15000000)return titlePrice;
+ const stated=Number(data.price);
+ return Number.isFinite(stated)&&stated>=100000&&stated<=15000000?stated:null;
+}
+
 /* Accept a calculated garden size only when the listing itself explicitly labels the dimensions. */
 function verifiedGardenArea(data){
  const txt=String(data.garden_description||'').replace(/[×✕]/g,'x').replace(/(\d),(\d)/g,'$1.$2');
@@ -205,7 +214,7 @@ async function importHouse(raw){
  // Reject duplicated URLs; the extension's floor-plan classification still needs a separate visual validation step.
  const floorplanCandidates=(data.floorplans||[]).filter(u=>!(data.images||[]).includes(u));
  const floorplans=await archive(floorplanCandidates,id,'floorplan',5);
- const p={id,url,source:data.source,title:data.title||'',address:data.address||'',price:data.price||null,bedrooms:data.bedrooms??null,bathrooms:data.bathrooms??null,wc_count:data.wc_count??null,floors:data.floors??null,floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:verifiedGardenArea(data),garden_description:data.garden_description||'',station_name:data.station_name||'',station_distance_miles:data.station_distance_miles??null,station_2_name:data.station_2_name||'',station_2_distance_miles:data.station_2_distance_miles??null,latitude:data.latitude??null,longitude:data.longitude??null,property_type:data.property_type||null,tenure:data.tenure||null,images,floorplans,created_by:user.id,status:'saved'};
+ const p={id,url,source:data.source,title:data.title||'',address:data.address||'',price:listingPrice(data),bedrooms:data.bedrooms??null,bathrooms:data.bathrooms??null,wc_count:data.wc_count??null,floors:data.floors??null,floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:verifiedGardenArea(data),garden_description:data.garden_description||'',station_name:data.station_name||'',station_distance_miles:data.station_distance_miles??null,station_2_name:data.station_2_name||'',station_2_distance_miles:data.station_2_distance_miles??null,latitude:data.latitude??null,longitude:data.longitude??null,property_type:data.property_type||null,tenure:data.tenure||null,images,floorplans,created_by:user.id,status:'saved'};
  const r=await sb.from('properties').insert(p);
  if(r.error)throw r.error;
  report('House saved with '+images.length+' photographs. Completing location, stations and floor plan…');
