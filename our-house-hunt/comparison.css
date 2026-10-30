@@ -111,3 +111,12 @@
 .hh-table td:nth-child(13) input[type=datetime-local]{min-width:158px}
 .hh-transit-icon span{font-size:14px}
 @media(max-width:640px){.hh-table{min-width:1940px}.hh-table td:nth-child(10) textarea,.hh-table td:nth-child(11) textarea{min-width:175px}}
+
+/* Station access data is shown in the existing Nearest station column. */
+.hh-station-entry{padding-bottom:9px;border-bottom:1px solid #e2eae3}
+.hh-station-entry:last-child{border-bottom:0;padding-bottom:0}
+.hh-station-access{font-size:12px;line-height:1.5;margin-top:4px;white-space:normal;min-width:165px}
+.hh-station-walk{font-weight:600;font-variant-numeric:tabular-nums}
+.hh-station-pt{font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.hh-station-google{display:inline-block;font-size:11px;text-decoration:underline;margin-top:3px}
+.hh-station-source{display:block;font-size:10px;line-height:1.35;color:#76877c;margin-top:3px}
