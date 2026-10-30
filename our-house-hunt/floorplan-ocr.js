@@ -42,13 +42,18 @@ export function parsePlanText(original){
   const width=numeric(garden[1]),length=numeric(garden[2]),sqm=width*length;
   if(width>1&&width<=40&&length>1&&length<=50&&sqm>=8&&sqm<=1500)result.garden_area_sqm=Math.round(sqm*100)/100;
  }
+ // Count storeys only when the plan explicitly labels a ground floor and subsequent levels.
+ const planLabels=String(original||'');
+ if(/\bground\s+floor\b/i.test(planLabels)&&/\bfirst\s+floor\b/i.test(planLabels)){
+  result.floors=/\bthird\s+floor\b/i.test(planLabels)?4:/\bsecond\s+floor\b/i.test(planLabels)?3:2;
+ }
  return result;
 }
 export async function analyzeFloorplan({sb,property,photo}){
  const p=property;
- if(!p?.id||!(p.floorplans||[]).length||(p.floor_area_sqm!=null&&p.garden_area_sqm!=null))return {status:'not-needed'};
+ if(!p?.id||!(p.floorplans||[]).length||(p.floor_area_sqm!=null&&p.garden_area_sqm!=null&&p.floors!=null))return {status:'not-needed'};
  const fingerprint=(p.floorplans||[])[0].path||(p.floorplans||[])[0].url;
- const key='hh-plan-ocr-v4:'+p.id+':'+fingerprint;
+ const key='hh-plan-ocr-v5:'+p.id+':'+fingerprint;
  let last=0;try{last=Number(localStorage.getItem(key)||0)}catch{}
  if(last&&Date.now()-last<30*86400000)return {status:'already-checked'};
  const imageUrl=await photo(p.floorplans[0]);
@@ -59,7 +64,7 @@ export async function analyzeFloorplan({sb,property,photo}){
  if(!blob.type.startsWith('image/'))return {status:'unsupported-plan'};
  const worker=await getWorker(),recognized=await worker.recognize(blob);
  const measurements=parsePlanText(recognized.data.text||''),changes={};
- for(const k of ['floor_area_sqm','garden_area_sqm'])if(p[k]==null&&measurements[k]!=null)changes[k]=measurements[k];
+ for(const k of ['floor_area_sqm','garden_area_sqm','floors'])if(p[k]==null&&measurements[k]!=null)changes[k]=measurements[k];
  try{localStorage.setItem(key,String(Date.now()))}catch{}
  if(!Object.keys(changes).length)return {status:'no-labelled-measurements'};
  const saved=await sb.from('properties').update(changes).eq('id',p.id).select('id').single();
