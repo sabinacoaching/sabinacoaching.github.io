@@ -5,6 +5,13 @@ export function setupStationAccess({sb,history,shouldAutoCalculate}){
  const el=(tag,cls='',content='')=>{const e=document.createElement(tag);e.className=cls;e.textContent=content;return e};
  const names=p=>[String(p.station_name||'').trim(),String(p.station_2_name||'').trim(),String(p.station_3_name||'').trim()];
  const coords=p=>p.latitude+','+p.longitude;
+ const normalizedStation=s=>String(s||'').toLowerCase().replace(/\s*\([^)]*\)/g,'').replace(/\b(?:railway|rail|train|station)\b/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+ const stationOverride=(c,name)=>{
+  const entries=Object.entries(c.google_verified||{});
+  if(c.google_verified?.[name])return c.google_verified[name];
+  const wanted=normalizedStation(name),matching=entries.filter(([key])=>normalizedStation(key)===wanted);
+  return matching.length===1?matching[0][1]:{};
+ };
  function destination(name){
   if(/tram/i.test(name))return name.replace(/\s*(?:tram\s*)?stop$/i,'')+' Tram Stop, London, UK';
   if(/underground|tube/i.test(name)||name==='Ealing Common')return name.replace(/\s*underground$/i,'')+' Underground Station, London, UK';
@@ -20,13 +27,13 @@ export function setupStationAccess({sb,history,shouldAutoCalculate}){
  }
  function render(p,i){
   const v=views.get(p.id+':'+i);if(!v)return;
-  const c=p.station_commutes||{},r=c.results?.[i]?.name===names(p)[i]?c.results?.[i]:{},t=completed(p)&&c.tfl_final.results?.[i]?.name===names(p)[i]?c.tfl_final.results?.[i]:null,override=c.google_verified?.[names(p)[i]]||{};
+  const c=p.station_commutes||{},r=c.results?.[i]?.name===names(p)[i]?c.results?.[i]:{},t=completed(p)&&c.tfl_final.results?.[i]?.name===names(p)[i]?c.tfl_final.results?.[i]:null,override=stationOverride(c,names(p)[i]);
   const google=c.google_routes?.complete&&c.google_routes?.origin===p.address&&c.google_routes?.stations?.[i]===names(p)[i]?c.google_routes.results[i]:null;
   const mi=override.walking_miles??google?.walking_miles??t?.walking_miles??r.walking_miles??r.google_walking?.miles??p[i===0?'station_distance_miles':i===1?'station_2_distance_miles':'station_3_distance_miles'];
   const mins=override.walking_minutes??google?.walking_minutes??t?.walking_minutes??r.walking_minutes??r.google_walking?.minutes??r.walking_estimate?.minutes??(mi!=null?Math.round(Number(mi)*20):null);
   const approxMiles=google?.walking_miles==null&&override.walking_miles==null&&t?.walking_miles==null&&r.walking_miles==null&&r.google_walking?.miles==null;
   const approxMins=google?.walking_minutes==null&&override.walking_minutes==null&&t?.walking_minutes==null&&r.walking_minutes==null&&r.google_walking?.minutes==null;
-  v.walk.textContent='Walking: '+(mi!=null?(approxMiles?'~':'')+Number(mi).toFixed(2)+' mi':'—')+(mins!=null?' / '+(approxMins?'~':'')+Math.round(mins)+' min':'');
+  v.walk.textContent='Walking: '+(mi!=null?(approxMiles?'~':'')+Number(mi).toFixed(2)+' mi':'—')+(mins!=null?' / '+(approxMins?'~':'')+Math.round(mins)+' min':'')+(override.walking_minutes!=null?' · manual':google?.walking_minutes!=null?' · Google':' · unverified');
   v.link.href=mapUrl(p,i);
   const pt=override.pt_minutes??google?.pt_minutes??t?.avg_minutes??r.avg_minutes;
   v.pt.textContent='PT: '+(pt!=null?(google?.pt_minutes!=null||override.pt_minutes!=null?'':'~')+Math.round(pt)+' min':'—');
