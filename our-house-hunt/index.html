@@ -226,7 +226,9 @@ async function enrichProperty(p){
  for(const [key,value] of [['bathrooms',listingBathrooms(data)],['floors',listingFloors(data)]]){
   if((p[key]==null||p[key]==='')&&value!=null)details[key]=value;
  }
- if((!p.floorplans||!p.floorplans.length)&&(data.floorplans||[]).length){
+ // Prefer a plan from the ORIGINAL listing if a legacy record only has a secondary-site viewer link.
+ const hasLegacyExternalViewer=(p.floorplans||[]).some(f=>/^https:\/\/www\.onthemarket\.com\//i.test(f.url||''));
+ if(((!p.floorplans||!p.floorplans.length)||hasLegacyExternalViewer)&&(data.floorplans||[]).length){
    const plans=await archive((data.floorplans||[]).filter(u=>!(data.images||[]).includes(u)),p.id,'floorplan',5);
    if(plans.length)details.floorplans=plans;
  }
