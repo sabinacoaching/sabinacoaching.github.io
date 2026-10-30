@@ -1,11 +1,11 @@
 import {setupStationAccess} from './station-commutes.js?v=14';
-export function setupComparison({sb,history,photo,openHouse,openPhotoBrowser}){
+export function setupComparison({sb,history,photo,openHouse,openPhotoBrowser,onReorder,canReorder,onStatusChange}){
 const stationAccess=setupStationAccess({sb,history});
 const $=id=>document.getElementById(id),node=(tag,cls='',content)=>{const x=document.createElement(tag);x.className=cls;if(content!==undefined)x.textContent=content;return x};
-const statuses={saved:'Saved',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold'};
+const statuses={'':'No status',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold',archived:'Archive (hide)',deleted:'Delete (move to trash)'};
 const labels=['House','Price','Bedrooms','Bathrooms / WC','Floors','Total floor area','Garden','Nearest station','Journey times','Sabina comments','David comments','Viewing status','Viewing date'];
-const extras=[['title','Listing title','text'],['url','Original listing URL','text'],['property_type','Property type','text'],['tenure','Tenure','text'],['latitude','Latitude','number'],['longitude','Longitude','number'],['wc_count','Separate WC','number'],['floors','Floors','number'],['floor_area_sqm','Floor area (m²)','number'],['garden_area_sqm','Garden area (m²)','number'],['garden_description','Garden description','textarea'],['station_name','Nearest station 1','text'],['station_distance_miles','Walking distance 1 (miles)','number'],['station_2_name','Nearest station 2','text'],['station_2_distance_miles','Walking distance 2 (miles)','number'],['comment_sabina','Sabina comments','textarea'],['comment_david','David comments','textarea']];
-const nums=new Set(['latitude','longitude','bedrooms','bathrooms','wc_count','floors','floor_area_sqm','garden_area_sqm','station_distance_miles','station_2_distance_miles']);
+const extras=[['title','Listing title','text'],['url','Original listing URL','text'],['property_type','Property type','text'],['tenure','Tenure','text'],['latitude','Latitude','number'],['longitude','Longitude','number'],['wc_count','Separate WC','number'],['floors','Floors','number'],['floor_area_sqm','Floor area (m²)','number'],['garden_area_sqm','Garden area (m²)','number'],['garden_description','Garden description','textarea'],['station_name','Nearest station 1','text'],['station_distance_miles','Walking distance 1 (miles)','number'],['station_2_name','Nearest station 2','text'],['station_2_distance_miles','Walking distance 2 (miles)','number'],['station_3_name','Nearest station 3','text'],['station_3_distance_miles','Walking distance 3 (miles)','number'],['comment_sabina','Sabina comments','textarea'],['comment_david','David comments','textarea']];
+const nums=new Set(['latitude','longitude','bedrooms','bathrooms','wc_count','floors','floor_area_sqm','garden_area_sqm','station_distance_miles','station_2_distance_miles','station_3_distance_miles']);
 const money=p=>p==null?'—':new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP',maximumFractionDigits:0}).format(p);
 const clean=x=>String(x||'House').replace(/^\s*\d+\s*bed(?:room)?s?\s+.*?\s+(?:for sale|to rent)\s*/i,'').replace(/^\s*property\s+for\s+sale\s*/i,'').replace(/\s*[-|]\s*zoopla.*$/i,'').replace(/\s*[-|]\s*rightmove.*$/i,'').replace(/,\s*(?:[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}|[A-Z]{1,2}\d[A-Z\d]?)$/i,'').replace(/\s+(?:[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}|[A-Z]{1,2}\d[A-Z\d]?)$/i,'').trim();
 const bar=node('div','hh-views'),tableBtn=node('button','active','Table'),mapBtn=node('button','','Map'),cardsBtn=node('button','','Cards'),undoBtn=node('button','hh-undo','Undo last edit'),notice=node('span','hh-notice','Changes save automatically.');
@@ -21,14 +21,15 @@ tableBtn.onclick=()=>selectMode('table');mapBtn.onclick=()=>selectMode('map');ca
 function cast(k,v){return nums.has(k)?(v===''?null:Number(v)):v}
 async function save(p,key,value,input){
  const val=cast(key,value);
+ if(key==='status'&&val==='deleted'&&!window.confirm('Move '+p.address+' to Deleted? It can be restored.')){if(input)input.value=p.status||'';return}
  if(nums.has(key)&&val!==null&&!Number.isFinite(val)){flash('Invalid number',true);return}
  if(String(p[key]??'')===String(val??''))return;
  const overrides={...(p.manual_overrides||{}),[key]:true};
  const r=await history.save(p,{[key]:val,manual_overrides:overrides});
  if(r.error){flash(r.error.message,true);input?.classList.add('hh-savefail');return}
- input?.classList.remove('hh-savefail');flash('Saved');
+ input?.classList.remove('hh-savefail');flash('Saved');if(key==='status')await onStatusChange?.(p,val);
 }
-function editor(p,key,type='text'){let x=node(type==='textarea'?'textarea':type==='select'?'select':'input');if(type==='select'){for(const [v,label] of Object.entries(statuses)){const opt=node('option','',label);opt.value=v;x.append(opt)}x.value=p[key]||'saved'}else{if(type==='number'){x.type='number';x.step='any';x.min='0'}if(type==='textarea')x.rows=6;x.value=p[key]??''}x.setAttribute('aria-label',key+' '+p.address);let tid;if(type==='textarea'){const minimum=(key==='comment_sabina'||key==='comment_david')?230:86;const resize=()=>{x.style.height='auto';x.style.height=Math.max(minimum,x.scrollHeight+8)+'px'};x.style.resize='none';x.style.overflowY='hidden';resize();x.addEventListener('input',()=>{resize();clearTimeout(tid);tid=setTimeout(()=>save(p,key,x.value,x),800)});x.addEventListener('blur',()=>{clearTimeout(tid);save(p,key,x.value,x)})}else x.addEventListener('change',()=>save(p,key,x.value,x));return x}
+function editor(p,key,type='text'){let x=node(type==='textarea'?'textarea':type==='select'?'select':'input');if(type==='select'){for(const [v,label] of Object.entries(statuses)){const opt=node('option','',label);opt.value=v;x.append(opt)}x.value=p[key]||''}else{if(type==='number'){x.type='number';x.step='any';x.min='0'}if(type==='textarea')x.rows=6;x.value=p[key]??''}x.setAttribute('aria-label',key+' '+p.address);let tid;if(type==='textarea'){const minimum=(key==='comment_sabina'||key==='comment_david')?230:86;const resize=()=>{x.style.height='auto';x.style.height=Math.max(minimum,x.scrollHeight+8)+'px'};x.style.resize='none';x.style.overflowY='hidden';resize();x.addEventListener('input',()=>{resize();clearTimeout(tid);tid=setTimeout(()=>save(p,key,x.value,x),800)});x.addEventListener('blur',()=>{clearTimeout(tid);save(p,key,x.value,x)})}else x.addEventListener('change',()=>save(p,key,x.value,x));return x}
 const cell=value=>{const t=node('td');if(value instanceof Node)t.append(value);else t.textContent=value;return t};
 const val=v=>v==null||v===''?'—':String(v);
 
@@ -135,6 +136,7 @@ function render(list){
  rows=list;
  const head=node('thead'),hr=node('tr');for(const h of labels)hr.append(node('th','',h));head.append(hr);
  const body=node('tbody');
+ let dragId=null;
  for(const p of list){
   const tr=node('tr');
   const house=node('div','hh-house'),photos=node('div','hh-photo-grid');
@@ -149,6 +151,19 @@ function render(list){
   details.type='button';details.onclick=()=>openHouse(p);
   details.style.cssText='display:block;margin-top:6px;padding:5px 10px;font-size:12px;background:#fff;color:#315e50;border-color:#cbd7d1';
   house.append(photos,address,link,details);
+  if(canReorder?.()){
+    const tools=node('div','hh-move-controls'),grip=node('button','hh-drag-handle','↕ Drag');
+    grip.type='button';grip.draggable=true;grip.title='Drag to place above another house';
+    grip.ondragstart=e=>{dragId=p.id;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',p.id);tr.classList.add('hh-dragging')};
+    grip.ondragend=()=>{dragId=null;tr.classList.remove('hh-dragging')};
+    const up=node('button','hh-move-arrow','↑'),down=node('button','hh-move-arrow','↓');
+    up.type='button';down.type='button';up.title='Move up one row';down.title='Move down one row';
+    up.onclick=()=>void onReorder?.(p.id,p.id,-1);down.onclick=()=>void onReorder?.(p.id,p.id,1);
+    tools.append(grip,up,down);house.append(tools);
+    tr.ondragover=e=>{if(dragId&&dragId!==p.id){e.preventDefault();tr.classList.add('hh-drop-target')}};
+    tr.ondragleave=()=>tr.classList.remove('hh-drop-target');
+    tr.ondrop=e=>{e.preventDefault();tr.classList.remove('hh-drop-target');const source=dragId||e.dataTransfer.getData('text/plain');dragId=null;if(source&&source!==p.id)void onReorder?.(source,p.id)};
+  }
 
   tr.append(cell(house));
   const price=labelledEditor(p,'£','price','number');price.classList.add('hh-price-editor');tr.append(cell(price));
@@ -170,13 +185,17 @@ function render(list){
   garden.append(labelledEditor(p,'Size (m²)','garden_area_sqm','number'),labelledEditor(p,'Description','garden_description','textarea'));
   tr.append(cell(garden));
   const station=node('div','hh-stack');
-  for(let i=0;i<2;i++){
+  for(let i=0;i<3;i++){
+   if(i===2&&!p.station_3_name)continue;
    const entry=node('div','hh-station-entry');
-   entry.append(labelledEditor(p,'Station '+(i+1),i===0?'station_name':'station_2_name'));
+   entry.append(labelledEditor(p,'Station '+(i+1),i===0?'station_name':i===1?'station_2_name':'station_3_name'));
+   const name=i===0?p.station_name:i===1?p.station_2_name:p.station_3_name;
+   entry.prepend(node('span','hh-station-kind',/underground|tube|ealing common/i.test(name||'')?'Ⓜ Underground':/tram/i.test(name||'')?'🚋 Tram':'🚆 Rail'));
    entry.append(stationAccess.attach(p,i));
 
    station.append(entry);
   }
+  if(!p.station_3_name){const add=node('button','hh-add-station','+ Third station');add.type='button';add.onclick=()=>{const n=window.prompt('Third station name');if(n)void save(p,'station_3_name',n.trim(),null).then(()=>onStatusChange?.())};station.append(add)}
   tr.append(cell(station));
   tr.append(cell(travelCell(p)));
   tr.append(cell(editor(p,'comment_sabina','textarea')));
