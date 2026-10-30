@@ -513,6 +513,7 @@ $('save').onclick=async()=>{if(!selected)return;const payload={address:$('editAd
 $('enrich').onclick=updateFromListing;
 $('remove').onclick=async()=>{if(!selected||!confirm('Remove this house and its comments?'))return;const r=await sb.from('properties').delete().eq('id',selected.id);if(r.error){alert(r.error.message);return}$('dialog').close();selected=null;await refresh()};
 $('noteForm').onsubmit=async e=>{e.preventDefault();if(!selected)return;const body=$('note').value.trim();if(!body)return;const r=await sb.from('notes').insert({property_id:selected.id,author_id:user.id,body});if(r.error){alert(r.error.message);return}$('note').value='';await loadNotes()};
+window.hhOpenFloorplanUpload=p=>{if(!p?.id)return;selected=p;$('floorPlanFile').click()};
 $('uploadPlan').onclick=()=>{if(selected)$('floorPlanFile').click()};
 $('floorPlanFile').onchange=async()=>{
  const f=$('floorPlanFile').files?.[0],p=selected;
