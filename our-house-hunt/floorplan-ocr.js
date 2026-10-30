@@ -74,15 +74,55 @@ export function parsePlanText(original){
 }
 // Reject photos mistakenly categorised as floor plans by a listing's gallery.
 // Conservative validation: an unrecognisable image is not silently stored as a plan.
-export async function validateFloorplanImage(blob){
- if(!blob?.type?.startsWith('image/'))return false;
+// Every candidate comes from the original listing. Use OCR plus image-layout evidence:
+// small or low-contrast plans can be diagrams even if OCR reads few room labels.
+export async function inspectFloorplanImage(blob){
+ const result={accepted:false,reason:"unreadable-image",ocr_labels:0,white_fraction:null,visual_diagram:false};
+ if(!blob?.type?.startsWith('image/'))return {...result,reason:"not-an-image"};
+ let bitmap;
  try{
-  const worker=await getWorker(),result=await worker.recognize(blob);
-  const text=String(result.data?.text||'');
-  const labels=(text.match(/\b(?:bedroom|bathroom|kitchen|reception|living\s+room|dining\s+room|ground\s+floor|first\s+floor|second\s+floor|total\s+area|approx(?:imate)?\s+area|en[\s-]?suite|garden)\b/gi)||[]);
-  const variety=new Set(labels.map(x=>x.toLowerCase()));
-  return labels.length>=3&&variety.size>=2;
- }catch(e){console.warn('Floorplan image validation failed',e);return false}
+  bitmap=await createImageBitmap(blob);
+  const w=bitmap.width,h=bitmap.height;
+  if(w<180||h<140)return {...result,reason:"image-too-small",width:w,height:h};
+  const canvas=document.createElement('canvas');canvas.width=96;canvas.height=96;
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  if(ctx){
+   ctx.drawImage(bitmap,0,0,96,96);
+   const pixels=ctx.getImageData(0,0,96,96).data;
+   let whites=0,neutral=0,darks=0,count=0;
+   for(let i=0;i<pixels.length;i+=4){
+    const r=pixels[i],g=pixels[i+1],b=pixels[i+2],lum=(r+g+b)/3;
+    if(Math.min(r,g,b)>224)whites++;
+    if(Math.max(r,g,b)-Math.min(r,g,b)<24)neutral++;
+    if(lum<105)darks++;
+    count++;
+   }
+   result.white_fraction=Math.round(1000*whites/count)/1000;
+   result.visual_diagram=whites/count>.58&&neutral/count>.64&&darks/count>.008&&darks/count<.36;
+  }
+  result.width=w;result.height=h;
+ }catch(e){result.reason="image-decoding-failed: "+String(e).slice(0,120);return result}
+ finally{bitmap?.close?.()}
+ try{
+  const worker=await getWorker(),recognized=await worker.recognize(blob);
+  const txt=String(recognized.data?.text||'');
+  const matches=txt.match(/\b(?:bedroom|bathroom|kitchen|reception|living\s+room|dining\s+room|ground\s+floor|first\s+floor|second\s+floor|floor\s*area|approx(?:imate)?\s+area|en[\s-]?suite|garden|shower\s+room|sitting\s+room)\b/gi)||[];
+  const variety=new Set(matches.map(v=>v.toLowerCase()));
+  result.ocr_labels=matches.length;
+  if(matches.length>=2&&variety.size>=2)result.accepted=true;
+  else if(parsePlanText(txt).floor_area_sqm!=null&&matches.length>=1)result.accepted=true;
+  else if(result.visual_diagram)result.accepted=true;
+  result.reason=result.accepted?'verified-plan':matches.length?'insufficient-labels-and-not-a-diagram':'ocr-no-plan-labels-and-not-a-diagram';
+ }catch(e){
+  // OCR is not infallible. Accept high-confidence visual diagrams even when
+  // Tesseract cannot read faint or very small room lettering.
+  if(result.visual_diagram){result.accepted=true;result.reason="verified-visual-diagram"}
+  else result.reason="ocr-error: "+String(e).slice(0,120);
+ }
+ return result;
+}
+export async function validateFloorplanImage(blob){
+ return (await inspectFloorplanImage(blob)).accepted;
 }
 export async function analyzeFloorplan({sb,property,photo}){
  const p=property;
