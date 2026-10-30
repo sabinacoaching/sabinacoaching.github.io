@@ -3,7 +3,7 @@
 export function setupStationAccess({sb,history}){
  const queue=[],pending=new Set(),attempted=new Set(),views=new Map();let working=false;
  const el=(tag,cls='',content='')=>{const e=document.createElement(tag);e.className=cls;e.textContent=content;return e};
- const names=p=>[String(p.station_name||'').trim(),String(p.station_2_name||'').trim()];
+ const names=p=>[String(p.station_name||'').trim(),String(p.station_2_name||'').trim(),String(p.station_3_name||'').trim()];
  const coords=p=>p.latitude+','+p.longitude;
  function destination(name){
   if(/tram/i.test(name))return name.replace(/\s*(?:tram\s*)?stop$/i,'')+' Tram Stop, London, UK';
@@ -16,13 +16,13 @@ export function setupStationAccess({sb,history}){
  }
  function completed(p){
   const q=p.station_commutes?.tfl_final;
-  return !!(q?.complete&&q.origin===coords(p)&&JSON.stringify(q.names)===JSON.stringify(names(p)));
+  return !!(q?.complete&&q.origin===coords(p)&&JSON.stringify(q.names)===JSON.stringify(names(p).slice(0,q.names?.length||2)));
  }
  function render(p,i){
   const v=views.get(p.id+':'+i);if(!v)return;
-  const c=p.station_commutes||{},r=c.results?.[i]||{},t=completed(p)?c.tfl_final.results?.[i]:null,override=c.google_verified?.[names(p)[i]]||{};
+  const c=p.station_commutes||{},r=c.results?.[i]?.name===names(p)[i]?c.results?.[i]:{},t=completed(p)&&c.tfl_final.results?.[i]?.name===names(p)[i]?c.tfl_final.results?.[i]:null,override=c.google_verified?.[names(p)[i]]||{};
   const google=c.google_routes?.complete&&c.google_routes?.origin===p.address&&c.google_routes?.stations?.[i]===names(p)[i]?c.google_routes.results[i]:null;
-  const mi=override.walking_miles??google?.walking_miles??t?.walking_miles??r.walking_miles??r.google_walking?.miles??p[i===0?'station_distance_miles':'station_2_distance_miles'];
+  const mi=override.walking_miles??google?.walking_miles??t?.walking_miles??r.walking_miles??r.google_walking?.miles??p[i===0?'station_distance_miles':i===1?'station_2_distance_miles':'station_3_distance_miles'];
   const mins=override.walking_minutes??google?.walking_minutes??t?.walking_minutes??r.walking_minutes??r.google_walking?.minutes??r.walking_estimate?.minutes??(mi!=null?Math.round(Number(mi)*20):null);
   const approxMiles=google?.walking_miles==null&&override.walking_miles==null&&t?.walking_miles==null&&r.walking_miles==null&&r.google_walking?.miles==null;
   const approxMins=google?.walking_minutes==null&&override.walking_minutes==null&&t?.walking_minutes==null&&r.walking_minutes==null&&r.google_walking?.minutes==null;
@@ -41,7 +41,7 @@ export function setupStationAccess({sb,history}){
     const r=await sb.functions.invoke('house-hunt-station-commutes',{body:{id:p.id}});
     if(r.error)throw r.error;
     if(!r.data?.commutes)throw Error(r.data?.error||'Missing journey result');
-    p.station_commutes=r.data.commutes;render(p,0);render(p,1);
+    p.station_commutes=r.data.commutes;render(p,0);render(p,1);render(p,2);
    }catch(e){console.warn('Journey calculation unavailable for '+p.address,e)}
    await new Promise(done=>setTimeout(done,900));
   }
@@ -50,7 +50,7 @@ export function setupStationAccess({sb,history}){
  function editLine(p,i,kind,host){
   if(host.querySelector('input'))return;
   const orig=host.textContent,which=names(p)[i],cache=p.station_commutes?.results?.[i]||{},manual=p.station_commutes?.google_verified?.[which]||{};
-  const originalMile=p[i===0?'station_distance_miles':'station_2_distance_miles'];
+  const originalMile=p[i===0?'station_distance_miles':i===1?'station_2_distance_miles':'station_3_distance_miles'];
   const values=kind==='walking'?
      [['walking_miles','Miles',manual.walking_miles??cache.walking_miles??originalMile],
       ['walking_minutes','Minutes',manual.walking_minutes??cache.walking_minutes]]:
@@ -76,7 +76,7 @@ export function setupStationAccess({sb,history}){
     }
     save.disabled=true;
     const changes={station_commutes:{...(p.station_commutes||{}),google_verified:{...(p.station_commutes?.google_verified||{}),[which]:next}}};
-    if(kind==='walking')changes[i===0?'station_distance_miles':'station_2_distance_miles']=next.walking_miles;
+    if(kind==='walking')changes[i===0?'station_distance_miles':i===1?'station_2_distance_miles':'station_3_distance_miles']=next.walking_miles;
     const r=await history.save(p,changes);
     if(r.error){alert('Could not save: '+r.error.message);save.disabled=false;return}
     host.replaceChildren();render(p,i);
@@ -99,7 +99,7 @@ export function setupStationAccess({sb,history}){
   pt.onkeydown=e=>{if(e.target===pt&&(e.key==='Enter'||e.key===' ')){e.preventDefault();editLine(p,i,'pt',pt)}};
   box.append(walk,link,pt);
   views.set(p.id+':'+i,{walk,link,pt});render(p,i);
-  if(p.latitude!=null&&p.longitude!=null&&names(p).every(Boolean)&&!completed(p)&&!pending.has(p.id)&&!attempted.has(p.id)){
+  if(p.latitude!=null&&p.longitude!=null&&names(p).slice(0,2).every(Boolean)&&!completed(p)&&!pending.has(p.id)&&!attempted.has(p.id)){
    pending.add(p.id);queue.push(p);void drain();
   }
   return box;
