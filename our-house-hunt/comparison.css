@@ -166,3 +166,20 @@
 .hh-third-collapse .hh-station-entry{padding-top:2px}
 .hh-add-station{padding:2px 4px!important;line-height:1.2;font-size:10px!important;margin-top:2px}
 .hh-house .hh-house-details{margin-top:3px!important;padding:4px 8px!important}
+
+/* Compact original station layout: no extra labels, all three visible. */
+.hh-listing-row{display:flex;align-items:center;gap:9px;flex-wrap:nowrap;min-width:0}
+.hh-listing-row .hh-original{white-space:nowrap;flex-shrink:0}
+.hh-listing-row .hh-move-controls{display:flex;align-items:center;gap:3px;margin:0!important;flex-wrap:nowrap}
+.hh-listing-row .hh-move-controls button{padding:2px 4px!important;font-size:10px!important;white-space:nowrap}
+.hh-station-entry{padding-bottom:5px!important;margin-bottom:2px}
+.hh-station-entry:last-child{padding-bottom:0!important;margin-bottom:0}
+.hh-station-name-row{display:flex;align-items:center;gap:5px;min-width:0}
+.hh-station-name{font-size:13px;min-width:0;width:100%;border:1px solid transparent;border-radius:5px;background:transparent;padding:2px 4px;box-sizing:border-box}
+.hh-station-name:hover,.hh-station-name:focus{border-color:#a8c4b3;background:#fbfdfb}
+.hh-station-name-row .hh-kind-inline{position:static;display:inline-block;flex-shrink:0;font-size:14px;line-height:1}
+.hh-station-name-row .hh-kind-overground{font-size:17px}
+.hh-station-access{margin-top:1px!important;line-height:1.35!important}
+.hh-station-access .hh-station-pt{margin-top:1px!important}
+.hh-station-access .hh-station-google{margin-top:1px!important}
+.hh-house .hh-house-details{margin-top:2px!important}
