@@ -76,7 +76,10 @@ export async function analyzeFloorplan({sb,property,photo}){
  const blob=await res.blob();
  if(!blob.type.startsWith('image/'))return {status:'unsupported-plan'};
  const worker=await getWorker(),recognized=await worker.recognize(blob);
- const measurements=parsePlanText(recognized.data.text||''),changes={};
+ const ocrText=recognized.data.text||'';
+ const planSignals=(ocrText.match(/\b(?:bedroom|bathroom|kitchen|dining\s+room|living\s+room|sitting\s+room|ground\s+floor|first\s+floor|total\s+(?:internal\s+)?floor\s+area|en[ -]?suite)\b/gi)||[]).length;
+ if(planSignals<2)return {status:'unverified-floorplan-image'};
+ const measurements=parsePlanText(ocrText),changes={};
  // Total floor area printed on the plan has priority over an approximate listing value.
  if(measurements.floor_area_sqm!=null&&Math.abs(Number(p.floor_area_sqm)-measurements.floor_area_sqm)>0.2)changes.floor_area_sqm=measurements.floor_area_sqm;
  if(p.floor_area_sqm==null&&measurements.floor_area_sqm!=null)changes.floor_area_sqm=measurements.floor_area_sqm;
