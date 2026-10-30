@@ -183,3 +183,17 @@
 .hh-station-access .hh-station-pt{margin-top:1px!important}
 .hh-station-access .hh-station-google{margin-top:1px!important}
 .hh-house .hh-house-details{margin-top:2px!important}
+
+/* Stable positioning and archive recovery controls. */
+.hh-table .hh-move-controls .hh-position-select {
+  width:83px;min-width:83px;max-width:83px;padding:3px 4px;font-size:11px;
+  border:1px solid #bfcfc5;border-radius:6px;background:#fff;color:#315e50;
+}
+.hh-table .hh-restore-house, .cards .hh-restore-house {
+  background:#fff;color:#315e50;border:1px solid #bfcfc5;border-radius:6px;
+  font-size:11px;padding:5px 9px;margin-top:5px;
+}
+@media(max-width:640px) {
+  .hh-listing-row {flex-wrap:wrap!important}
+  .hh-listing-row .hh-move-controls {flex-wrap:wrap!important}
+}
