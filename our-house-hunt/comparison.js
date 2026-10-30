@@ -273,7 +273,7 @@ async function showMap(){
  if(!map){
   let saved=null;try{saved=JSON.parse(localStorage.getItem('hh-map-view')||'null')}catch{}
   const valid=saved&&Number.isFinite(saved.lat)&&Number.isFinite(saved.lon)&&Number.isFinite(saved.zoom)&&saved.zoom>=10&&saved.zoom<=19;
-  map=L.map(mapDiv,{zoomControl:true,preferCanvas:true}).setView(valid?[saved.lat,saved.lon]:[51.466,-.31],valid?saved.zoom:12);
+  map=L.map(mapDiv,{zoomControl:true,scrollWheelZoom:true,touchZoom:true,wheelPxPerZoomLevel:60,zoomSnap:0.5,preferCanvas:true}).setView(valid?[saved.lat,saved.lon]:[51.466,-.31],valid?saved.zoom:12);
   mapFramed=!!valid;
   const voyager=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors © CARTO'});
   const street=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'});
