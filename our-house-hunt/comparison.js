@@ -4,8 +4,8 @@ const stationAccess=setupStationAccess({sb});
 const $=id=>document.getElementById(id),node=(tag,cls='',content)=>{const x=document.createElement(tag);x.className=cls;if(content!==undefined)x.textContent=content;return x};
 const statuses={saved:'Saved',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold'};
 const labels=['House','Price','Bedrooms','Bathrooms / WC','Floors','Total floor area','Garden','Nearest station','Journey times','Sabina comments','David comments','Viewing status','Viewing date'];
-const extras=[['wc_count','Separate WC','number'],['floors','Floors','number'],['floor_area_sqm','Floor area (m²)','number'],['garden_area_sqm','Garden area (m²)','number'],['garden_description','Garden description','textarea'],['station_name','Nearest station 1','text'],['station_distance_miles','Walking distance 1 (miles)','number'],['station_2_name','Nearest station 2','text'],['station_2_distance_miles','Walking distance 2 (miles)','number'],['comment_sabina','Sabina comments','textarea'],['comment_david','David comments','textarea']];
-const nums=new Set(['bedrooms','bathrooms','wc_count','floors','floor_area_sqm','garden_area_sqm','station_distance_miles','station_2_distance_miles']);
+const extras=[['title','Listing title','text'],['url','Original listing URL','text'],['property_type','Property type','text'],['tenure','Tenure','text'],['latitude','Latitude','number'],['longitude','Longitude','number'],['wc_count','Separate WC','number'],['floors','Floors','number'],['floor_area_sqm','Floor area (m²)','number'],['garden_area_sqm','Garden area (m²)','number'],['garden_description','Garden description','textarea'],['station_name','Nearest station 1','text'],['station_distance_miles','Walking distance 1 (miles)','number'],['station_2_name','Nearest station 2','text'],['station_2_distance_miles','Walking distance 2 (miles)','number'],['comment_sabina','Sabina comments','textarea'],['comment_david','David comments','textarea']];
+const nums=new Set(['latitude','longitude','bedrooms','bathrooms','wc_count','floors','floor_area_sqm','garden_area_sqm','station_distance_miles','station_2_distance_miles']);
 const money=p=>p==null?'—':new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP',maximumFractionDigits:0}).format(p);
 const clean=x=>String(x||'House').replace(/^\s*\d+\s*bed(?:room)?s?\s+.*?\s+(?:for sale|to rent)\s*/i,'').replace(/^\s*property\s+for\s+sale\s*/i,'').replace(/\s*[-|]\s*zoopla.*$/i,'').replace(/\s*[-|]\s*rightmove.*$/i,'').replace(/,\s*(?:[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}|[A-Z]{1,2}\d[A-Z\d]?)$/i,'').replace(/\s+(?:[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}|[A-Z]{1,2}\d[A-Z\d]?)$/i,'').trim();
 const bar=node('div','hh-views'),tableBtn=node('button','active','Table'),mapBtn=node('button','','Map'),cardsBtn=node('button','','Cards'),editBtn=node('button','hh-edit-switch','Edit mode: OFF'),notice=node('span','hh-notice','Read-only until Edit mode is enabled.');
@@ -58,7 +58,7 @@ const journeyQueue=[],queuedJourneys=new Set(),journeyViews=new Map(),journeyRet
 let travelProcessing=false,travelFailures=0,journeyPauseUntil=0;
 const journeyFresh=p=>travelDestinations.every(d=>{
  const v=p.journey_estimates?.[d.id];
- return v&&Number.isFinite(Number(v.minutes))&&v.origin===p.latitude+','+p.longitude&&Date.now()-Date.parse(v.calculated_at)<7*86400000
+ return v&&Number.isFinite(Number(v.minutes))&&v.origin===p.latitude+','+p.longitude&&(v.manual_override===true||Date.now()-Date.parse(v.calculated_at)<7*86400000)
 });
 function journeySummary(p,d){
  const v=p.journey_estimates?.[d.id];
@@ -93,7 +93,23 @@ function travelCell(p){
  const wrapper=node('div','hh-travel'),view={};
  for(const d of travelDestinations){
   const line=node('div','hh-trip'),title=node('span','hh-trip-title',d.title+' · '+d.arrival),minutes=node('strong','hh-trip-minutes',journeySummary(p,d));
-  line.append(title,minutes);wrapper.append(line);view[d.id]=minutes;
+  line.append(title,minutes);
+   if(editing){
+    const label=node('label','hh-trip-edit'),input=node('input');
+    label.append(node('span','hh-mini','Minutes'),input);
+    input.type='number';input.step='1';input.min='0';
+    input.value=p.journey_estimates?.[d.id]?.minutes??'';
+    input.onchange=async()=>{
+     const n=Number(input.value);
+     if(input.value===''||!Number.isFinite(n)||n<0){flash('Enter journey minutes',true);return}
+     const data={...(p.journey_estimates||{}),[d.id]:{...(p.journey_estimates?.[d.id]||{}),minutes:n,origin:p.latitude+','+p.longitude,calculated_at:new Date().toISOString(),manual_override:true}};
+     const result=await sb.from('properties').update({journey_estimates:data}).eq('id',p.id);
+     if(result.error){flash(result.error.message,true);return}
+     p.journey_estimates=data;minutes.textContent='~'+Math.round(n)+' min';flash('Journey saved');
+    };
+    line.append(label);
+   }
+   wrapper.append(line);view[d.id]=minutes;
  }
  wrapper.append(node('small','hh-trip-help','Arrival time · typical Tuesday · public transport'));
  journeyViews.set(p.id,view);
@@ -186,10 +202,10 @@ function render(list){
 }
 const detail=node('section','hh-aux'),detailGrid=node('div','hh-auxgrid'),controls={};
 detail.append(node('h3','','Property details'),detailGrid);
-for(const [key,label,type] of extras){const l=node('label',type==='textarea'?'wide':'');l.append(document.createTextNode(label));const x=node(type==='textarea'?'textarea':'input');if(type==='textarea')x.rows=2;else{x.type=type;if(type==='number')x.step='any'}l.append(x);controls[key]=x;detailGrid.append(l)}
+for(const [key,label,type] of extras){const l=node('label',type==='textarea'?'wide':'');l.append(document.createTextNode(label));const x=node(type==='textarea'?'textarea':'input');if(type==='textarea')x.rows=2;else{x.type=type;if(type==='number')x.step='any'}x.readOnly=!editing;l.append(x);controls[key]=x;detailGrid.append(l)}
 $('dialog').querySelector('.actions').before(detail);
 const floorPanel=node('section','hh-planbox'),floorContents=node('div');floorPanel.append(node('h3','','Floor plans'),floorContents);$('detailFacts').before(floorPanel);
-async function open(p){for(const [key] of extras)controls[key].value=p[key]??'';floorContents.replaceChildren();if(!(p.floorplans||[]).length){floorPanel.hidden=true;return}floorPanel.hidden=false;
+async function open(p){for(const [key] of extras){controls[key].value=p[key]??'';controls[key].readOnly=!editing;}floorContents.replaceChildren();if(!(p.floorplans||[]).length){floorPanel.hidden=true;return}floorPanel.hidden=false;
 for(const f of p.floorplans){const u=await photo(f);if(!u)continue;if(/\.pdf(?:\?|$)/i.test(f.path||f.url||'')||/^https:\/\/www\.onthemarket\.com\/details\/\d+\/#\/floorplans\/\d+$/i.test(u)){const a=node('a','','Open floor plan ↗');a.href=u;a.target='_blank';a.rel='noopener noreferrer';floorContents.append(a)}else{const image=node('img');image.src=u;image.alt='Floor plan';floorContents.append(image)}}}
 function edited(){const o={};for(const [key] of extras)o[key]=cast(key,controls[key].value);return o}
 async function postcodeLocate(p){const a=p.address||p.title||'',full=a.match(/\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i),out=a.match(/\b([A-Z]{1,2}\d[A-Z\d]?)\b/i);if(!full&&!out)return false;const url=full?'https://api.postcodes.io/postcodes/'+encodeURIComponent(full[1].replace(/\s/g,'')):'https://api.postcodes.io/outcodes/'+encodeURIComponent(out[1]);const r=await fetch(url);if(!r.ok)return false;const j=await r.json(),v=j.result;if(!v||!Number.isFinite(v.latitude)||!Number.isFinite(v.longitude))return false;const saveResult=await sb.from('properties').update({latitude:v.latitude,longitude:v.longitude}).eq('id',p.id);if(saveResult.error)throw saveResult.error;p.latitude=v.latitude;p.longitude=v.longitude;return true}
@@ -395,5 +411,5 @@ function redraw(){
  scheduleTransport();
 }
 
-return {render,open,edited};
+return {render,open,edited,isEditing:()=>editing};
 }
