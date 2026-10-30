@@ -8,7 +8,7 @@ export function setupStationAccess({sb}) {
   const raw=nameFor(p,i);
   if(!raw)return '';
   if(/tram/i.test(raw))return raw.replace(/\s*(?:tram\s*)?stop$/i,'')+' Tram Stop, London, UK';
-  if(/underground|tube/i.test(raw))return raw.replace(/\s*underground$/i,'')+' Underground Station, London, UK';
+  if(/underground|tube/i.test(raw)||/^Ealing Common$/i.test(raw))return raw.replace(/\s*underground$/i,'')+' Underground Station, London, UK';
   return raw.replace(/\s*(?:rail|railway|train|station)$/i,'')+' Railway Station, London, UK';
  }
  function mapsUrl(p,i,mode){
@@ -18,7 +18,7 @@ export function setupStationAccess({sb}) {
   return 'https://www.google.com/maps/dir/?'+new URLSearchParams({api:'1',origin,destination:stationDestination(p,i),travelmode:mode}).toString();
  }
  function attach(p,i){
-  const box=node('div','hh-station-access'),walk=node('div','hh-station-walk'),pt=node('div','hh-station-pt'),google=node('a','hh-station-google','Google Maps walking ↗'),transit=node('a','hh-station-google','Google Maps PT ↗');
+  const box=node('div','hh-station-access'),walk=node('div','hh-station-walk'),google=node('a','hh-station-google','Google Maps walking ↗'),transit=node('a','hh-station-google','PT: Google Maps ↗');
   const mi=p[i===0?'station_distance_miles':'station_2_distance_miles'];
   const googleWalk=p.station_commutes?.results?.[i]?.google_walking;
   // Do not show an empty '/ — min'. Google has not supplied minutes via its API.
@@ -27,8 +27,7 @@ export function setupStationAccess({sb}) {
   transit.href=mapsUrl(p,i,'transit');transit.target='_blank';transit.rel='noopener noreferrer';
   // Old TfL scores varied from the times Google Maps showed and were not
   // independently reconciled. Never render them as validated PT journey times.
-  pt.textContent='PT: see Google Maps';
-  box.append(walk,google,pt,transit);
+  box.append(walk,google,transit);
   return box;
  }
  return {attach};
