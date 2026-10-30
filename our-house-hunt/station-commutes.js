@@ -33,7 +33,7 @@ export function setupStationAccess({sb}) {
    v.pt.textContent='PT: '+(r?.error?'unavailable':r?.note?'no reliable route':p.latitude==null?'no map point':'calculating…');
    v.pt.title=r?.error||r?.note||'';
   }
-  v.source.textContent=g?'Walking: Google Maps · PT: TfL':(mi!=='—'?'Distance: OSM route · ':'')+'Google walking minutes not yet available · PT: TfL';
+
  }
  async function processQueue(){
   if(processing)return;processing=true;
@@ -56,11 +56,10 @@ export function setupStationAccess({sb}) {
  }
  function attach(p,i){
   const box=node('div','hh-station-access'),walk=node('div','hh-station-walk'),
-        pt=node('div','hh-station-pt'),google=node('a','hh-station-google','Google Maps walking ↗'),
-        source=node('small','hh-station-source');
+        pt=node('div','hh-station-pt'),google=node('a','hh-station-google','Google Maps walking ↗');
   google.target='_blank';google.rel='noopener noreferrer';google.title='Open walking directions from house to this station';
-  box.append(walk,google,pt,source);
-  views.set(p.id+':'+i,{walk,pt,google,source});
+  box.append(walk,google,pt);
+  views.set(p.id+':'+i,{walk,pt,google});
   update(p,i);
   if(p.latitude!=null&&p.longitude!=null&&names(p)[i]&&!fresh(p)&&!pending.has(p.id)&&Date.now()>(retry.get(p.id)||0)){
     pending.add(p.id);queue.push(p);void processQueue();
