@@ -150,7 +150,8 @@ function render(list){
   const details=node('button','hh-house-details','Details');
   details.type='button';details.onclick=()=>openHouse(p);
   details.style.cssText='display:block;margin-top:6px;padding:5px 10px;font-size:12px;background:#fff;color:#315e50;border-color:#cbd7d1';
-  house.append(photos,address,link);
+  const listingRow=node('div','hh-listing-row');listingRow.append(link);
+  house.append(photos,address,listingRow);
   if(canReorder?.()){
     const tools=node('div','hh-move-controls'),grip=node('button','hh-drag-handle','↕ Drag');
     grip.type='button';grip.draggable=true;grip.title='Drag to place above another house';
@@ -159,7 +160,7 @@ function render(list){
     const up=node('button','hh-move-arrow','↑'),down=node('button','hh-move-arrow','↓');
     up.type='button';down.type='button';up.title='Move up one row';down.title='Move down one row';
     up.onclick=()=>void onReorder?.(p.id,p.id,-1);down.onclick=()=>void onReorder?.(p.id,p.id,1);
-    tools.append(grip,up,down);house.append(tools);
+    tools.append(grip,up,down);listingRow.append(tools);
     tr.ondragover=e=>{if(dragId&&dragId!==p.id){e.preventDefault();tr.classList.add('hh-drop-target')}};
     tr.ondragleave=()=>tr.classList.remove('hh-drop-target');
     tr.ondrop=e=>{e.preventDefault();tr.classList.remove('hh-drop-target');const source=dragId||e.dataTransfer.getData('text/plain');dragId=null;if(source&&source!==p.id)void onReorder?.(source,p.id)};
@@ -189,7 +190,10 @@ function render(list){
    if(i===2&&!p.station_3_name)continue;
    const name=i===0?p.station_name:i===1?p.station_2_name:p.station_3_name;
    const entry=node('div','hh-station-entry');
-   const edit=labelledEditor(p,'Station '+(i+1),i===0?'station_name':i===1?'station_2_name':'station_3_name');
+   const field=i===0?'station_name':i===1?'station_2_name':'station_3_name';
+   const edit=editor(p,field);
+   edit.classList.add('hh-station-name');
+   edit.setAttribute('aria-label','Station '+(i+1));
    const service=p.station_commutes?.results?.[i]?.station_type||'';
    const isTube=service==='tube'||/underground|tube|ealing common/i.test(name||'');
    const isOverground=service==='overground'||/^(Wandsworth Road|Clapham High Street|Imperial Wharf|Gunnersbury|Richmond)$/i.test(name||'');
@@ -197,13 +201,11 @@ function render(list){
    if(isTube||isOverground||isTram){
     const symbol=node('span','hh-kind-inline '+(isTube?'hh-kind-tube':isOverground?'hh-kind-overground':'hh-kind-tram'),isTube?'Ⓜ':isOverground?'◎':'▱');
     symbol.title=isTube?'Underground':isOverground?'London Overground':'Tram';
-    edit.append(symbol);edit.classList.add('hh-field-has-kind');
+    const nameRow=node('div','hh-station-name-row');nameRow.append(edit,symbol);entry.append(nameRow);
    }
-   entry.append(edit,stationAccess.attach(p,i));
-   if(i===2){
-    const collapse=node('details','hh-third-collapse'),summary=node('summary','','3rd: '+name);
-    collapse.append(summary,entry);station.append(collapse);
-   }else station.append(entry);
+   if(!entry.children.some(x=>x.className==='hh-station-name-row'))entry.append(edit);
+   entry.append(stationAccess.attach(p,i));
+   station.append(entry);
   }
   if(!p.station_3_name){
    const add=node('button','hh-add-station','+ 3rd station');add.type='button';
