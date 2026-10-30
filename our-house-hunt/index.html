@@ -340,10 +340,12 @@ async function autoFillMissing(){
    .sort((a,b)=>Number(b.id===nelsonId)-Number(a.id===nelsonId));
  let checked=0,changedTotal=0;const unresolved=[];
  for(const p of pending){
-  const key='hh-details-v07-'+p.id;
-  if(sessionStorage.getItem(key)==='attempted')continue;
+  const key='hh-details-v08-'+p.id;
+  // Never suppress the Nelson Road retry when an extension was updated in an open tab.
+  // Older code marked the attempt complete before knowing if it found a plan.
+  if(p.id!==nelsonId&&sessionStorage.getItem(key)==='attempted')continue;
   if(checked>=3)break; // Avoid bulk rate-limited re-imports on every page load.
-  sessionStorage.setItem(key,'attempted');
+  if(p.id!==nelsonId)sessionStorage.setItem(key,'attempted');
   report('Checking missing listing details for '+p.address+'…');
   try{
    const changed=await enrichProperty(p);
@@ -351,7 +353,7 @@ async function autoFillMissing(){
    if(!p.floorplans?.length)unresolved.push(p.address+': '+(p._floorplan_import?.status||'plan not extracted'));
    ++checked;
    await refresh();
-  }catch(e){++checked;console.warn('Auto-fill failed for '+p.url,e)}
+  }catch(e){++checked;unresolved.push(p.address+': '+(e.message||String(e)));console.warn('Auto-fill failed for '+p.url,e)}
  }
  if(checked)report('Checked '+checked+' incomplete listings. '+(changedTotal?'Added '+changedTotal+' missing fields. ':'')+(unresolved.length?'Floor plans not extracted: '+unresolved.join('; ')+'. ':'')+'Further checks run when the catalogue is opened again.',!!unresolved.length);
 }
@@ -464,7 +466,7 @@ sb.auth.onAuthStateChange((event)=>{
 async function show(){const r=await sb.from('members').select('id,display_name');if(r.error){txt('loginError','Unable to check membership: '+r.error.message);return}people=Object.fromEntries(r.data.map(x=>[x.id,x.display_name]));if(!people[user.id]){txt('loginError','This account is not registered as a household member');return}$('login').hidden=true;$('mainApp').hidden=false;$('logout').hidden=false;$('refresh').hidden=false;$('changePassword').hidden=false;txt('who',people[user.id]);await refresh()}
 $('loginForm').onsubmit=async e=>{e.preventDefault();txt('loginError','');const r=await sb.auth.signInWithPassword({email:$('email').value,password:$('password').value});if(r.error){txt('loginError',r.error.message);return}user=r.data.user;await show();startAutoFill()};
 $('logout').onclick=async()=>{await sb.auth.signOut();location.reload()};
-$('refresh').onclick=refresh;
+$('refresh').onclick=async()=>{await refresh();if(!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){try{if(await probeImporter())await autoFillMissing()}catch(e){report('Automatic import retry failed: '+(e.message||e),true)}}};
 $('importForm').onsubmit=async e=>{e.preventDefault();$('importButton').disabled=true;try{await importHouse($('urlInput').value.trim());$('urlInput').value=''}catch(err){report(err.message,true)}finally{$('importButton').disabled=false}};
 for(const id of ['stageFilter','sort','search'])$(id).addEventListener(id==='search'?'input':'change',render);
 $('close').onclick=()=>$('dialog').close();
