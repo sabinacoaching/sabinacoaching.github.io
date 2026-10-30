@@ -25,7 +25,7 @@ export function setupStationAccess({sb}) {
   // Do not show an empty '/ — min'. Google has not supplied minutes via its API.
   const walkingMiles=confirmed?.walking_miles??googleWalk?.miles??mi;
   const walkingMinutes=confirmed?.walking_minutes??googleWalk?.minutes;
-  walk.textContent='Walking: '+(walkingMiles==null?'—':Number(walkingMiles).toFixed(2))+' mi'+(walkingMinutes!=null?' / '+Math.round(walkingMinutes)+' min':'');
+  walk.textContent='Walking: '+(walkingMiles==null?'—':(confirmed?.walking_miles==null&&googleWalk?.miles==null?'≈':'')+Number(walkingMiles).toFixed(2))+' mi'+(walkingMinutes!=null?' / '+Math.round(walkingMinutes)+' min':'');
   google.href=mapsUrl(p,i,'walking');google.target='_blank';google.rel='noopener noreferrer';
   transit.href=mapsUrl(p,i,'transit');transit.target='_blank';transit.rel='noopener noreferrer';
   if(confirmed?.pt_minutes!=null)transit.textContent='PT: '+Math.round(confirmed.pt_minutes)+' min · Google Maps ↗';
