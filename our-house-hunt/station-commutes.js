@@ -26,8 +26,8 @@ export function setupStationAccess({sb}){
   const override=p.station_commutes?.google_verified?.[name(p,i)]||{};
   const rawMiles=p[i===0?'station_distance_miles':'station_2_distance_miles'];
   const miles=c?.walking_miles??override.walking_miles??old.google_walking?.miles??rawMiles;
-  const minutes=c?.walking_minutes??override.walking_minutes??old.google_walking?.minutes;
-  v.walk.textContent='Walking: '+(miles!=null?(c||override.walking_miles!=null||old.google_walking?.miles!=null?'':'≈')+Number(miles).toFixed(2)+' mi':'—')+(minutes!=null?' / '+Math.round(minutes)+' min':'');
+  const minutes=c?.walking_minutes??override.walking_minutes??old.google_walking?.minutes??old.walking_estimate?.minutes??(miles!=null?Math.round(Number(miles)*20):null);
+  v.walk.textContent='Walking: '+(miles!=null?(c||override.walking_miles!=null||old.google_walking?.miles!=null?'':'≈')+Number(miles).toFixed(2)+' mi':'—')+(minutes!=null?' / '+(c||override.walking_minutes!=null||old.google_walking?.minutes!=null?'':'~')+Math.round(minutes)+' min':'');
   v.link.href=googleLink(p,i);
   const pt=c?.pt_minutes??override.pt_minutes??old.avg_minutes;
   v.pt.textContent='PT: '+(pt==null?'—':(c||override.pt_minutes!=null?'':'~')+Math.round(pt)+' min');
