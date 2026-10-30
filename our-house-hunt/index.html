@@ -83,7 +83,7 @@ dialog.hh-photo-viewer[open]{display:flex;flex-direction:column}
 <script type="module">
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 import {setupComparison} from './comparison.js?v=17';
-import {analyzeFloorplan} from './floorplan-ocr.js?v=9';
+import {analyzeFloorplan,validateFloorplanImage} from './floorplan-ocr.js?v=10';
 const sb=createClient('https://ficnuovumurmhzdujjvj.supabase.co','sb_publishable_yrArzwZ2GizO5ATuiAkymg_LdpVZKC9');
 const $=id=>document.getElementById(id);
 const labels={saved:'Saved',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold'};
@@ -159,6 +159,7 @@ async function archive(urls,id,prefix='photo',limit=10){
    const data=await extension('FETCH_IMAGE',{url:sourceUrl},20000);
    const blob=blob64(data.base64,data.mime);
    if(blob.size<1300||blob.size>5000000)continue;
+   if(prefix==='source-plan'&&!(await validateFloorplanImage(blob))){console.warn('Discarding image without floorplan labels',sourceUrl);continue;}
    let hash=null;
    try{hash=await perceptualImageHash(blob)}catch(e){console.warn('Cannot compare picture; preserving image',e)}
    if(hash&&hashes.some(other=>hashDistance(hash,other)<=12))continue;
