@@ -45,7 +45,7 @@ export async function analyzeFloorplan({sb,property,photo}){
  let last=0;try{last=Number(localStorage.getItem(key)||0)}catch{}
  if(last&&Date.now()-last<30*86400000)return {status:'already-checked'};
  const imageUrl=await photo(p.floorplans[0]);
- if(!imageUrl||/\.pdf(?:\?|$)/i.test(fingerprint))return {status:'unsupported-plan'};
+ if(!imageUrl||/\.pdf(?:\?|$)/i.test(fingerprint)||/^https:\/\/www\.onthemarket\.com\/details\/\d+\/#\/floorplans\/\d+$/i.test(imageUrl))return {status:'external-floorplan-viewer'};
  const res=await fetch(imageUrl);
  if(!res.ok)throw Error('Cannot read floor plan '+res.status);
  const blob=await res.blob();
