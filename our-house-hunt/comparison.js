@@ -158,6 +158,7 @@ function render(list){
     const tools=node('div','hh-move-controls'),grip=node('button','hh-drag-handle','↕ Drag');
     grip.type='button';grip.draggable=true;grip.title='Drag to place above another house';
     grip.ondragstart=e=>{dragId=p.id;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',p.id);tr.classList.add('hh-dragging')};
+    grip.ondrag=e=>{if(dragId!==p.id||!e.clientY)return;const bounds=wrap.getBoundingClientRect();const margin=55;if(e.clientY<bounds.top+margin)wrap.scrollTop-=24;else if(e.clientY>bounds.bottom-margin)wrap.scrollTop+=24;};
     grip.ondragend=()=>{dragId=null;tr.classList.remove('hh-dragging')};
     const up=node('button','hh-move-arrow','↑'),down=node('button','hh-move-arrow','↓');
     up.type='button';down.type='button';up.title='Move up one row';down.title='Move down one row';
