@@ -29,8 +29,15 @@ export function parsePlanText(original){
  for(const rx of areaMatches){
   const m=text.match(rx);if(m){const n=numeric(m[1]);if(n>=35&&n<=500){result.floor_area_sqm=n;break}}
  }
- // Require garden label and length/width with explicit metres. Exclude arbitrary room dimensions.
- const garden=text.match(/\b(?:rear\s+|private\s+|back\s+)?garden\b.{0,140}?(\d{1,2}(?:\.\d{1,2})?)\s*(?:m(?:etres?)?)?\s*(?:x|by)\s*(\d{1,2}(?:\.\d{1,2})?)\s*(?:m|metres?)\b/i);
+ // A garden measurement must occur immediately after its label on the SAME printed line.
+ // Do not join arbitrary room sizes to a garden label elsewhere in the floor plan.
+ const gardenLines=String(original||'').split(/[\r\n]+/);
+ let garden=null;
+ for(const row of gardenLines){
+  const candidate=row.replace(/[×✕]/g,'x').replace(/(\d),(\d)/g,'$1.$2').trim()
+    .match(/^(?:(?:rear|private|back)\s+)?garden\s*[:( -]?\s*(?:(?:dimensions?|size|measures?|approx(?:imately)?)\s*[: -]?\s*)?(\d{1,2}(?:\.\d{1,2})?)\s*(?:m|metres?)?\s*(?:x|by)\s*(\d{1,2}(?:\.\d{1,2})?)\s*(?:m|metres?)\b/i);
+  if(candidate){garden=candidate;break}
+ }
  if(garden){
   const width=numeric(garden[1]),length=numeric(garden[2]),sqm=width*length;
   if(width>1&&width<=40&&length>1&&length<=50&&sqm>=8&&sqm<=1500)result.garden_area_sqm=Math.round(sqm*100)/100;
@@ -41,7 +48,7 @@ export async function analyzeFloorplan({sb,property,photo}){
  const p=property;
  if(!p?.id||!(p.floorplans||[]).length||(p.floor_area_sqm!=null&&p.garden_area_sqm!=null))return {status:'not-needed'};
  const fingerprint=(p.floorplans||[])[0].path||(p.floorplans||[])[0].url;
- const key='hh-plan-ocr-v2:'+p.id+':'+fingerprint;
+ const key='hh-plan-ocr-v4:'+p.id+':'+fingerprint;
  let last=0;try{last=Number(localStorage.getItem(key)||0)}catch{}
  if(last&&Date.now()-last<30*86400000)return {status:'already-checked'};
  const imageUrl=await photo(p.floorplans[0]);
