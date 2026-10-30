@@ -1,4 +1,4 @@
-export function setupComparison({sb,photo,openHouse}){
+export function setupComparison({sb,photo,openHouse,openPhotoBrowser}){
 const $=id=>document.getElementById(id),node=(tag,cls='',content)=>{const x=document.createElement(tag);x.className=cls;if(content!==undefined)x.textContent=content;return x};
 const statuses={saved:'Saved',interested:'Interested',viewing_booked:'Viewing booked',viewed:'Viewed',shortlisted:'Shortlisted',rejected:'Rejected',under_offer_sold:'Under offer / Sold'};
 const labels=['House','Price','Bedrooms','Bathrooms / WC','Floors','Total floor area','Garden','Nearest station','Journey times','Sabina comments','David comments','Viewing status','Viewing date'];
@@ -27,7 +27,12 @@ async function distinctPhotos(p,container){
     const img=node('img','hh-photo'+(i===0?' hh-photo-main':''));
     img.alt='Property photograph '+(i+1);
     img.loading='lazy';
-    img.onclick=()=>openHouse(p);
+    img.onclick=()=>openPhotoBrowser(p,i);
+    img.style.cursor='zoom-in';
+    img.tabIndex=0;
+    img.setAttribute('role','button');
+    img.setAttribute('aria-label','Enlarge photograph '+(i+1)+' of '+p.address);
+    img.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openPhotoBrowser(p,i)}};
     container.append(img);
     try{const url=await photo(photos[i]);if(url)img.src=url;else img.classList.add('hh-photo-missing')}
     catch(e){img.classList.add('hh-photo-missing')}
@@ -110,7 +115,10 @@ function render(list){
   address.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();address.blur()}});
   address.addEventListener('blur',()=>save(p,'address',address.textContent.trim(),address));
   const link=node('a','hh-original','Listing ↗');link.href=p.url;link.target='_blank';link.rel='noopener noreferrer';
-  house.append(photos,address,link);
+  const details=node('button','hh-house-details','Details');
+  details.type='button';details.onclick=()=>openHouse(p);
+  details.style.cssText='display:block;margin-top:6px;padding:5px 10px;font-size:12px;background:#fff;color:#315e50;border-color:#cbd7d1';
+  house.append(photos,address,link,details);
   tr.append(cell(house));
   const price=labelledEditor(p,'£','price','number');price.classList.add('hh-price-editor');tr.append(cell(price));
   tr.append(cell(editor(p,'bedrooms','number')));
