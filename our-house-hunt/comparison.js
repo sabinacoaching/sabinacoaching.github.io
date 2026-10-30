@@ -1,4 +1,4 @@
-import {setupStationAccess} from './station-commutes.js?v=4';
+import {setupStationAccess} from './station-commutes.js?v=5';
 export function setupComparison({sb,photo,openHouse,openPhotoBrowser}){
 const stationAccess=setupStationAccess({sb});
 const $=id=>document.getElementById(id),node=(tag,cls='',content)=>{const x=document.createElement(tag);x.className=cls;if(content!==undefined)x.textContent=content;return x};
