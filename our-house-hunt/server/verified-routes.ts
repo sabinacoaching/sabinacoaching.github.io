@@ -78,15 +78,17 @@ Deno.serve(async req=>{
   for(const item of destinations){
    try{
     const arr=londonArrival(day,item.time),value=await googleRoute(key,origin,item,"TRANSIT",arr);
-    const arrivalMs=Date.parse(arr),actualDeparture=new Date(arrivalMs-value.route.seconds*1000).toISOString();
-    updates[item.id]={id:item.id,minutes:Math.ceil(value.route.seconds/60),date:day.replaceAll("-",""),desired_arrival:arr,arrival_deadline:arr,departure_estimate:actualDeparture,origin:check.lat+","+check.lon,address:p.address,origin_place_id:origin,origin_formatted:check.formatted,source:"Google Routes API",audit_version:"google-address-validated-v1",destination:item.name,destination_coordinates:[item.lat,item.lon],alternatives:value.alternatives,calculated_at:new Date().toISOString(),manual_override:false};
+    
+    updates[item.id]={id:item.id,minutes:Math.ceil(value.route.seconds/60),date:day.replaceAll("-",""),desired_arrival:arr,arrival_deadline:arr,origin:check.lat+","+check.lon,address:p.address,origin_place_id:origin,origin_formatted:check.formatted,source:"Google Routes API",audit_version:"google-address-validated-v1",destination:item.name,destination_coordinates:[item.lat,item.lon],alternatives:value.alternatives,calculated_at:new Date().toISOString(),manual_override:false};
    }catch(e){errors.push({destination:item.id,error:String(e).slice(0,240)})}
   }
   const names=[p.station_name,p.station_2_name,p.station_3_name].filter(x=>pad(x));
   for(const [i,name] of names.entries()){
    try{
     const stationGeo=await googleGeocode(key,name+" station, London");
-    if(!stationGeo?.place_id||stationGeo.partial_match)throw Error("Station not resolved exactly");
+    const nameCore=String(name).toLowerCase().replace(/\s*\([^)]*\)/g,"").replace(/[^a-z0-9]/g,"");
+    const stationMatch=String(stationGeo?.formatted_address||"").toLowerCase().replace(/[^a-z0-9]/g,"").includes(nameCore);
+    if(!stationGeo?.place_id||stationGeo.partial_match||!stationMatch||!stationGeo.types?.some(x=>["train_station","transit_station","subway_station","light_rail_station","establishment","point_of_interest"].includes(x)))throw Error("Station geocoded to a different or uncertain destination");
     const result=await googleRoute(key,origin,{placeId:stationGeo.place_id},"WALK");
     stationResults.push({name,station_slot:i,station_place_id:stationGeo.place_id,walking_miles:Math.round(result.route.distanceMeters/1609.344*100)/100,walking_minutes:Math.ceil(result.route.seconds/60),source:"Google Routes API"});
    }catch(e){errors.push({station:name,error:String(e).slice(0,240)});stationResults.push({name,station_slot:i,error:String(e).slice(0,240)})}
