@@ -40,6 +40,19 @@ export function parsePlanText(original){
     .match(/^(?:(?:rear|private|back)\s+)?garden\s*[:( -]?\s*(?:(?:dimensions?|size|measures?|approx(?:imately)?)\s*[: -]?\s*)?(\d{1,2}(?:\.\d{1,2})?)\s*(?:m|metres?)?\s*(?:x|by)\s*(\d{1,2}(?:\.\d{1,2})?)\s*(?:m|metres?)\b/i);
   if(candidate){garden=candidate;break}
  }
+ // Many original floor plans place the garden label on one OCR line and
+ // the dimensions immediately below it, often without printed metric units.
+ // Use only the next one or two lines attached to the Garden heading, not
+ // arbitrary measurements elsewhere in the plan.
+ if(!garden){
+  const rows=String(original||'').split(/[\r\n]+/).map(v=>v.trim());
+  for(let i=0;i<rows.length;i++){
+   if(!/^(?:rear\s+|back\s+|private\s+)?garden\b/i.test(rows[i]))continue;
+   const local=rows.slice(i,Math.min(rows.length,i+3)).join(' ').replace(/[×✕]/g,'x');
+   const m=local.match(/\b(\d{1,2}(?:\.\d{1,2})?)\s*(?:m|metres?)?\s*x\s*(\d{1,2}(?:\.\d{1,2})?)\s*(?:m|metres?)?(?=\s|$|[),;])/i);
+   if(m&&(/\./.test(m[1])&&/\./.test(m[2])||/\b(?:m|metres?)\b/i.test(local))){garden=m;break}
+  }
+ }
  // Agency plans sometimes print imperial measurements with metric lengths in parentheses.
  // Example: Garden Approximate 49'3 (15.00) x 16'5 (5.00)
  if(!garden){
