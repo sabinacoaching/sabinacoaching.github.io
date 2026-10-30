@@ -186,7 +186,7 @@ async function enrichWalkingStations(p){
    if(query.length<8)return false;
    // Nominatim frequently returns no result when a street name is combined with only an outcode (e.g. TW2).
    // Retry the same street without the incomplete postcode; never substitute a postcode-area centroid.
-   const withoutOutcode=query.replace(/\\s+[A-Z]{1,2}\\d[A-Z\\d]?(?:\\s+\\d[A-Z]{2})?\\s*$/i,'').trim();
+   const withoutOutcode=query.replace(/\s+[A-Z]{1,2}\d[A-Z\d]?(?:\s+\d[A-Z]{2})?\s*$/i,'').trim();
    const candidates=[query,...(withoutOutcode!==query?[withoutOutcode]:[])];
    let coordinate=null,lastGeoError=null;
    for(const candidate of candidates){
