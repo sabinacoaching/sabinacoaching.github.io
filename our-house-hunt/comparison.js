@@ -122,6 +122,7 @@ function render(list){
   details.type='button';details.onclick=()=>openHouse(p);
   details.style.cssText='display:block;margin-top:6px;padding:5px 10px;font-size:12px;background:#fff;color:#315e50;border-color:#cbd7d1';
   house.append(photos,address,link,details);
+   if(editing){const all=node('button','hh-edit-all','Edit all details');all.onclick=()=>openHouse(p);house.append(all)}
   tr.append(cell(house));
   const price=labelledEditor(p,'£','price','number');price.classList.add('hh-price-editor');tr.append(cell(price));
   tr.append(cell(editor(p,'bedrooms','number')));
@@ -130,6 +131,7 @@ function render(list){
   tr.append(cell(bath));
   tr.append(cell(editor(p,'floors','number')));
   const floorArea=node('div','hh-stack');floorArea.append(labelledEditor(p,'m²','floor_area_sqm','number'));
+   const planUpload=node('button','hh-inline-plan-upload',(p.floorplans||[]).length?'Add / replace floor plan':'Upload floor plan');planUpload.type='button';planUpload.onclick=()=>window.hhOpenFloorplanUpload?.(p);floorArea.append(planUpload);
   if((p.floorplans||[]).length){
     const plan=node('a','hh-plan-link','Floor plan ↗');plan.href='#';plan.target='_blank';plan.rel='noopener noreferrer';plan.title='Open the original floor plan';
     photo(p.floorplans[0]).then(u=>{if(u)plan.href=u}).catch(()=>{});
@@ -145,6 +147,28 @@ function render(list){
    const entry=node('div','hh-station-entry');
    entry.append(labelledEditor(p,'Station '+(i+1),i===0?'station_name':'station_2_name'));
    entry.append(stationAccess.attach(p,i));
+    if(editing){
+      const cache=p.station_commutes?.results?.[i]||{},override=p.station_commutes?.google_verified?.[i===0?p.station_name:p.station_2_name]||{};
+      const controls=[['walking_miles','Walking miles',override.walking_miles??cache.walking_miles??p[i===0?'station_distance_miles':'station_2_distance_miles']],['walking_minutes','Walking min',override.walking_minutes??cache.walking_minutes],['pt_minutes','PT min',override.pt_minutes??cache.avg_minutes]];
+      const box=node('div','hh-station-manual');
+      for(const [key,title,current] of controls){
+        const label=node('label','hh-field hh-manual-field'),input=node('input'),cap=node('span','hh-mini',title);
+        input.type='number';input.step='any';input.min='0';input.value=current??'';
+        label.append(cap,input);box.append(label);
+        input.onchange=async()=>{
+          const v=input.value===''?null:Number(input.value);
+          if(v!==null&&(!Number.isFinite(v)||v<0)){flash('Invalid station number',true);return}
+          const name=i===0?p.station_name:p.station_2_name;
+          const corrections={...(p.station_commutes?.google_verified||{}),[name]:{...(p.station_commutes?.google_verified?.[name]||{}),[key]:v,source:'manual',updated_at:new Date().toISOString()}};
+          const data={station_commutes:{...(p.station_commutes||{}),google_verified:corrections}};
+          if(key==='walking_miles')data[i===0?'station_distance_miles':'station_2_distance_miles']=v;
+          const result=await sb.from('properties').update(data).eq('id',p.id);
+          if(result.error){flash(result.error.message,true);return}
+          Object.assign(p,data);flash('Saved');render(rows);
+        };
+      }
+      entry.append(box);
+    }
    station.append(entry);
   }
   tr.append(cell(station));
