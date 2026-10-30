@@ -19,7 +19,13 @@ export function setupStationAccess({sb,history,shouldAutoCalculate}){
  }
  function mapUrl(p,i){
   const origin=p.address?.trim()?p.address+', United Kingdom':coords(p);
-  return 'https://www.google.com/maps/dir/?'+new URLSearchParams({api:'1',origin,destination:destination(names(p)[i]),travelmode:'walking'}).toString();
+  const args={api:'1',origin,destination:destination(names(p)[i]),travelmode:'walking'};
+  const checked=p.station_commutes?.google_routes;
+  if(checked?.origin===p.address&&checked?.origin_place_id&&checked?.stations?.[i]===names(p)[i]&&checked?.results?.[i]?.station_place_id){
+   args.origin_place_id=checked.origin_place_id;
+   args.destination_place_id=checked.results[i].station_place_id;
+  }
+  return 'https://www.google.com/maps/dir/?'+new URLSearchParams(args).toString();
  }
  function completed(p){
   const q=p.station_commutes?.tfl_final;
