@@ -29,7 +29,7 @@ export function setupStationAccess({sb,history}){
   v.walk.textContent='Walking: '+(mi!=null?(approxMiles?'~':'')+Number(mi).toFixed(2)+' mi':'—')+(mins!=null?' / '+(approxMins?'~':'')+Math.round(mins)+' min':'');
   v.link.href=mapUrl(p,i);
   const pt=override.pt_minutes??google?.pt_minutes??t?.avg_minutes??r.avg_minutes;
-  v.pt.textContent='PT: '+(pt!=null?(google?.pt_minutes!=null||override.pt_minutes!=null?'':'~')+Math.round(pt)+' min':t?'no PT route':'—');
+  v.pt.textContent='PT: '+(pt!=null?(google?.pt_minutes!=null||override.pt_minutes!=null?'':'~')+Math.round(pt)+' min':'—');
   v.pt.title=override.pt_minutes!=null?(override.source==='manual'?'Manually entered time':'User-verified time'):google?.pt_minutes!=null?'Google Routes API':t?'TfL five Tuesday departures':r.avg_minutes!=null?'Previous TfL saved time':'No timetable route';
  }
  async function drain(){
