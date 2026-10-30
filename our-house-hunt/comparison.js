@@ -136,8 +136,10 @@ function render(list){
  rows=list;
  const head=node('thead'),hr=node('tr');for(const h of labels)hr.append(node('th','',h));head.append(hr);
  const body=node('tbody');
+ table.replaceChildren(head,body);
  let dragId=null;
  for(const p of list){
+  try {
   const tr=node('tr');
   const house=node('div','hh-house'),photos=node('div','hh-photo-grid');
   distinctPhotos(p,photos).catch(e=>console.warn('Photo gallery',e));
@@ -220,8 +222,14 @@ function render(list){
   const view=node('input');view.type='datetime-local';view.value=p.viewing_at?p.viewing_at.slice(0,16):'';view.setAttribute('aria-label','Viewing date '+(p.address||p.title));view.onchange=async()=>{const v=view.value?new Date(view.value).toISOString():null;const r=await history.save(p,{viewing_at:v,manual_overrides:{...(p.manual_overrides||{}),viewing_at:true}});if(r.error)flash(r.error.message,true);else flash('Saved')};tr.append(cell(view));
   if(tr.cells.length!==labels.length)throw Error('Comparison column count mismatch');
   body.append(tr);
+  }catch(e){
+   console.error('House comparison row render failed',p.address||p.id,e);
+   const fallback=node('tr','hh-render-fallback'),message=node('td');
+   message.colSpan=labels.length;
+   message.textContent=(p.address||p.title||'Property')+' · '+money(p.price)+' · Table row error: '+String(e?.message||e);
+   fallback.append(message);body.append(fallback);
+  }
  }
- table.replaceChildren(head,body);
  $('empty').hidden=!!rows.length;
  if(mode==='map')redraw();
 }
