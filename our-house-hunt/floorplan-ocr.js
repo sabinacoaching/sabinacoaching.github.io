@@ -21,14 +21,14 @@ async function getWorker(){
 }
 const numeric=s=>Number(String(s).replace(',','.'));
 export function parsePlanText(original){
- const text=String(original||'').replace(/[×✕]/g,'x').replace(/(\d),(\d)/g,'$1.$2').replace(/\s+/g,' ');
+ const text=String(original||'').replace(/[×✕]/g,'x').replace(/(\d),(?=\d{3}\b)/g,'$1').replace(/(\d),(\d)/g,'$1.$2').replace(/\s+/g,' ');
  const result={},areaMatches=[
    /(?:total\s+(?:internal\s+|gross\s+)?(?:floor\s+)?area|gross\s+internal\s+area|gia|approx(?:imate)?\s+floor\s+area)[\s:;./\-]{0,15}.{0,95}?(\d{2,3}(?:\.\d{1,2})?)\s*(?:sq\.?\s*m(?:etres?)?|sqm|m2|m²)(?=\s|$|[.,;])/i,
    /(\d{2,3}(?:\.\d{1,2})?)\s*(?:sq\.?\s*m|sqm|m2|m²).{0,45}?(?:total\s+(?:internal\s+)?area|gross\s+internal\s+area)\b/i,
    /(?:total\s+(?:internal\s+|gross\s+)?(?:floor\s+)?area|gross\s+internal\s+area|gia|approx(?:imate)?\s+floor\s+area)[\s:;./\-]{0,15}.{0,95}?(\d{3,4}(?:\.\d{1,2})?)\s*(?:sq\.?\s*f(?:t|eet)|sq\.?\s*ft|square\s+feet)(?=\s|$|[.,;])/i
  ];
  for(const rx of areaMatches){
-  const m=text.match(rx);if(m){const n=numeric(m[1]);const converted=/sq\.?\s*f(?:t|eet)|square\s+feet/i.test(m[0])?Math.round(n*0.09290304*100)/100:n;if(converted>=35&&converted<=500){result.floor_area_sqm=converted;break}}
+  const m=text.match(rx);if(m){const n=numeric(m[1].replace(/,(?=\d{3}\b)/g,''));const converted=/sq\.?\s*f(?:t|eet)|square\s+feet/i.test(m[0])?Math.round(n*0.09290304*100)/100:n;if(converted>=35&&converted<=500){result.floor_area_sqm=converted;break}}
  }
  // A garden measurement must occur immediately after its label on the SAME printed line.
  // Do not join arbitrary room sizes to a garden label elsewhere in the floor plan.
