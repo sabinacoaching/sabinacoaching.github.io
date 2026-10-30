@@ -203,7 +203,7 @@ function render(list){
     symbol.title=isTube?'Underground':isOverground?'London Overground':'Tram';
     const nameRow=node('div','hh-station-name-row');nameRow.append(edit,symbol);entry.append(nameRow);
    }
-   if(!entry.children.some(x=>x.className==='hh-station-name-row'))entry.append(edit);
+   if(!entry.querySelector('.hh-station-name-row'))entry.append(edit);
    entry.append(stationAccess.attach(p,i));
    station.append(entry);
   }
