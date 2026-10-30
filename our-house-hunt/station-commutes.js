@@ -7,9 +7,9 @@ export function setupStationAccess({sb}) {
  function stationDestination(p,i){
   const raw=nameFor(p,i);
   if(!raw)return '';
-  if(/tram/i.test(raw))return raw.replace(/\\s*stop$/i,'')+' Tram Stop, London, UK';
-  if(/underground|tube/i.test(raw))return raw.replace(/\\s*underground$/i,'')+' Underground Station, London, UK';
-  return raw.replace(/\\s*(?:rail|railway|train|station)$/i,'')+' Railway Station, London, UK';
+  if(/tram/i.test(raw))return raw.replace(/\s*stop$/i,'')+' Tram Stop, London, UK';
+  if(/underground|tube/i.test(raw))return raw.replace(/\s*underground$/i,'')+' Underground Station, London, UK';
+  return raw.replace(/\s*(?:rail|railway|train|station)$/i,'')+' Railway Station, London, UK';
  }
  function mapsUrl(p,i,mode){
   // Coordinates are only for the HOUSE origin. For the destination use a named
