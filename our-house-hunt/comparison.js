@@ -68,12 +68,12 @@ const journeyQueue=[],queuedJourneys=new Set(),journeyViews=new Map(),journeyRet
 let travelProcessing=false,travelFailures=0,journeyPauseUntil=0;
 const journeyFresh=p=>travelDestinations.every(d=>{
  const v=p.journey_estimates?.[d.id];
- return v&&Number.isFinite(Number(v.minutes))&&v.origin===p.latitude+','+p.longitude&&(v.manual_override===true||Date.now()-Date.parse(v.calculated_at)<7*86400000)
+ return v&&Number.isFinite(Number(v.minutes))&&v.origin===p.latitude+','+p.longitude&&(v.manual_override===true||v.audit_version==='arrival-closest-20261030'||v.calculation_version==='arrival-closest-v2'||Date.now()-Date.parse(v.calculated_at)<7*86400000)
 });
 function journeySummary(p,d){
  const v=p.journey_estimates?.[d.id];
  if(v&&Number.isFinite(Number(v.minutes))&&v.minutes>0){
-   return '~'+Math.round(v.minutes)+' min';
+   return Math.round(v.minutes)+' min';
  }
  return 'Calculating…';
 }
@@ -115,7 +115,7 @@ function travelCell(p){
      if(input.value.trim()===''||!Number.isFinite(n)||n<0){flash('Invalid journey minutes',true);line.replaceChildren(title,minutes);return}
      const data={...(p.journey_estimates||{}),[d.id]:{...(p.journey_estimates?.[d.id]||{}),minutes:n,origin:p.latitude+','+p.longitude,calculated_at:new Date().toISOString(),manual_override:true}};
      const r=await history.save(p,{journey_estimates:data});
-     if(r.error)flash(r.error.message,true);else{minutes.textContent='~'+Math.round(n)+' min';flash('Saved')}
+     if(r.error)flash(r.error.message,true);else{minutes.textContent=Math.round(n)+' min';flash('Saved')}
      line.replaceChildren(title,minutes);
     };
     input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();void commit()}if(e.key==='Escape'){busy=true;line.replaceChildren(title,minutes)}};
