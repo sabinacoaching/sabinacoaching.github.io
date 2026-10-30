@@ -28,7 +28,7 @@ export function parsePlanText(original){
    /(?:total\s+(?:internal\s+|gross\s+)?(?:floor\s+)?area|gross\s+internal\s+area|gia|approx(?:imate)?\s+floor\s+area)[\s:;./\-]{0,15}.{0,95}?(\d{3,4}(?:\.\d{1,2})?)\s*(?:sq\.?\s*f(?:t|eet)|sq\.?\s*ft|square\s+feet)(?=\s|$|[.,;])/i
  ];
  for(const rx of areaMatches){
-  const m=text.match(rx);if(m){const n=numeric(m[1]);const converted=/sq\\.?\\s*f(?:t|eet)|square\\s+feet/i.test(m[0])?Math.round(n*0.09290304*100)/100:n;if(converted>=35&&converted<=500){result.floor_area_sqm=converted;break}}
+  const m=text.match(rx);if(m){const n=numeric(m[1]);const converted=/sq\.?\s*f(?:t|eet)|square\s+feet/i.test(m[0])?Math.round(n*0.09290304*100)/100:n;if(converted>=35&&converted<=500){result.floor_area_sqm=converted;break}}
  }
  // A garden measurement must occur immediately after its label on the SAME printed line.
  // Do not join arbitrary room sizes to a garden label elsewhere in the floor plan.
@@ -85,8 +85,8 @@ export async function analyzeFloorplan({sb,property,photo}){
  // Portal bathrooms count can include a separate WC; use labelled plan rooms only
  // when their total agrees with the total reported in the source, or the source did not give a count.
  const labelled=measurements.plan_bathrooms,standalone=measurements.plan_separate_wcs;
- const portalTotal=p.bathrooms==null?null:Number(p.bathrooms)+(p.wc_count==null?0:Number(p.wc_count));
- if(labelled!=null&&(portalTotal==null||labelled+standalone===portalTotal)){
+ const portalCount=p.bathrooms==null?null:Number(p.bathrooms);const existingTotal=portalCount==null?null:portalCount+(p.wc_count==null?0:Number(p.wc_count));
+ if(labelled!=null&&(portalCount==null||labelled+standalone===portalCount||labelled+standalone===existingTotal)){
    if(p.bathrooms!==labelled)changes.bathrooms=labelled;
    if(p.wc_count!==standalone)changes.wc_count=standalone;
  }
