@@ -59,7 +59,7 @@ async function readPropertyFromPage(){
     };
     visit(root);
     if(!listing)continue;
-    const media=items=>(items||[]).map(x=>x.filename).filter(x=>typeof x==='string'&&/^[a-z0-9_-]+\.(?:jpg|jpeg|png|webp)$/i.test(x)).map(x=>'https://lid.zoocdn.com/u/1200/900/'+x);
+    const media=items=>(items||[]).map(x=>x.filename).filter(x=>typeof x==='string'&&/^[a-z0-9_-]+\.(?:jpg|jpeg|png|webp|gif|avif)$/i.test(x)).map(x=>'https://lid.zoocdn.com/u/1200/900/'+x);
     const photosFromSource=media(listing.propertyImage);
     if(photosFromSource.length!==listing.propertyImage.length)continue;
     authoritativePhotos=photosFromSource;authoritativePlans=media(listing.floorPlan.image);
@@ -347,17 +347,23 @@ async function readPropertyFromPage(){
  address=address.replace(/^\s*\d+\s*bed(?:room)?s?\s+.*?\s+(?:for sale|to rent)\s*/i,'').replace(/^\s*property\s+for\s+sale\s*/i,'').replace(/\s*[-|]\s*(?:Zoopla|Rightmove).*$/i,'').trim();
  if(address.length>160)address=title.slice(0,160);
  if(!gallery.length)throw new Error('Listing loaded but house photographs were not found');
- return {source,title,address,price,bedrooms,bathrooms,wc_count:wcs,floors,floor_area_sqm:area,garden_area_sqm:gardenArea,garden_description:gardenDescription,station_name:stationName,station_distance_miles:stationMiles,station_2_name:station2Name,station_2_distance_miles:station2Miles,latitude,longitude,property_type:propertyType,tenure,images:gallery,floorplans:plans,floorplan_status:plans.length?'found-in-original-listing':clickedPlanTab?'tab-opened-but-image-not-found':floorTab?'floorplan-tab-click-failed':'floorplan-tab-not-found',floorplan_diagnostic:{tabFound:!!floorTab,tabClicked:clickedPlanTab,candidateCount:plans.length,error:planTabError},extension_version:'0.9.0'};
+ return {listing_id:location.pathname.match(/\/(?:details|properties)\/(\d+)/)?.[1]||null,source,title,address,price,bedrooms,bathrooms,wc_count:wcs,floors,floor_area_sqm:area,garden_area_sqm:gardenArea,garden_description:gardenDescription,station_name:stationName,station_distance_miles:stationMiles,station_2_name:station2Name,station_2_distance_miles:station2Miles,latitude,longitude,property_type:propertyType,tenure,images:gallery,floorplans:plans,floorplan_status:plans.length?'found-in-original-listing':clickedPlanTab?'tab-opened-but-image-not-found':floorTab?'floorplan-tab-click-failed':'floorplan-tab-not-found',floorplan_diagnostic:{tabFound:!!floorTab,tabClicked:clickedPlanTab,candidateCount:plans.length,error:planTabError},extension_version:'0.9.0'};
 }
 async function extract(url){
  if(!validListing(url))throw new Error('URL must be a Zoopla or Rightmove individual property listing');
  let tab;
  try{
   tab=await chrome.tabs.create({url,active:false});await waitForLoad(tab.id);
+  const expectedId=new URL(url).pathname.match(/\/(?:details|properties)\/(\d+)/)?.[1];
+  const finalUrl=(await chrome.tabs.get(tab.id)).url||'';
+  const finalId=new URL(finalUrl).pathname.match(/\/(?:details|properties)\/(\d+)/)?.[1];
+  if(!expectedId||finalId!==expectedId)throw Error('The original listing is unavailable or redirected to another page');
   // Give the app's client-rendered listing content time to appear in the DOM.
   await new Promise(r=>setTimeout(r,1600));
   const result=await chrome.scripting.executeScript({target:{tabId:tab.id},func:readPropertyFromPage});
-  return result?.[0]?.result;
+  const data=result?.[0]?.result,expected=new URL(url).pathname.match(/\/(?:details|properties)\/(\d+)/)?.[1];
+  if(!data||!expected||data.listing_id!==expected)throw Error('The original listing is unavailable or redirected to another page');
+  return data;
  }finally{if(tab?.id)await chrome.tabs.remove(tab.id).catch(()=>{})}
 }
 async function fetchImage(url){

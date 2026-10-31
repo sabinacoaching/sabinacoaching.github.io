@@ -58,10 +58,10 @@ dialog.hh-photo-viewer[open]{display:flex;flex-direction:column}
 <section id="mainApp" hidden>
 
 <section class="panel import"><form id="importForm"><label>Add a property</label><div class="inputrow"><input id="urlInput" type="url" placeholder="Paste a Zoopla or Rightmove listing link" required><button id="importButton">Import house</button></div></form><p id="importMessage" class="hint status">Paste the listing URL. The Chrome extension reads its photographs and details.</p></section>
-<div class="filters"><label>Stage<select id="stageFilter"><option value="all">All active</option><option value="archived">Archived</option><option value="deleted">Deleted</option><option value="">—</option><option value="interested">Interested</option><option value="viewing_booked">Viewing booked</option><option value="viewed">Viewed</option><option value="shortlisted">Shortlisted</option><option value="rejected">Rejected</option><option value="under_offer_sold">Under offer / Sold</option></select></label><label>Sort<select id="sort"><option value="manual">My order (drag to rearrange)</option><option value="newest">Recently added</option><option value="price_asc">Lowest price</option><option value="price_desc">Highest price</option><option value="area_desc">Largest house</option><option value="area_asc">Smallest house</option><option value="station_asc">Closest station (walking)</option><option value="station_desc">Furthest station (walking)</option></select></label><label>Search<input id="search" placeholder="Address or area"></label><div id="count" class="count"></div><button id="archiveToggle" type="button" class="secondary">Archived (0)</button><button id="exportExcel" class="secondary" type="button">Export Excel</button><button id="exportPdf" class="secondary" type="button">Export PDF</button><button id="verifyRoutes" class="secondary" type="button">Verify journeys (Google)</button></div>
+<div class="filters"><label>Stage<select id="stageFilter"><option value="all">All active</option><option value="archived">Archived</option><option value="deleted">Deleted</option><option value="">—</option><option value="interested">Interested</option><option value="viewing_booked">Viewing booked</option><option value="viewed">Viewed</option><option value="shortlisted">Shortlisted</option><option value="rejected">Rejected</option><option value="under_offer_sold">Under offer / Sold</option></select></label><label>Sort<select id="sort"><option value="manual">My order (drag to rearrange)</option><option value="newest">Recently added</option><option value="price_asc">Lowest price</option><option value="price_desc">Highest price</option><option value="area_desc">Largest house</option><option value="area_asc">Smallest house</option><option value="station_asc">Closest station (walking)</option><option value="station_desc">Furthest station (walking)</option></select></label><label>Search<input id="search" placeholder="Address or area"></label><div id="count" class="count"></div><button id="archiveToggle" type="button" class="secondary">Archived (0)</button><button id="exportExcel" class="secondary" type="button">Export Excel</button><button id="exportPdf" class="secondary" type="button">Export PDF</button></div>
 <div id="cards" class="cards"></div><div id="empty" class="empty" hidden>No houses yet. Import your first listing above.</div>
 </section></main>
-<dialog id="dialog"><div class="dialogtop"><h2 id="detailTitle"></h2><button id="close" class="secondary">✕</button></div><div id="gallery" class="gallery"></div><div class="detailbody"><div id="detailFacts" class="facts"></div><div class="detailsgrid"><label>Address<input id="editAddress"></label><label>Price (£)<input id="editPrice" type="number" min="0"></label><label>Bedrooms<input id="editBeds" type="number" min="0"></label><label>Bathrooms<input id="editBaths" type="number" min="0"></label><label>Stage<select id="editStage"><option value="">—</option><option value="interested">Interested</option><option value="viewing_booked">Viewing booked</option><option value="viewed">Viewed</option><option value="shortlisted">Shortlisted</option><option value="rejected">Rejected</option><option value="under_offer_sold">Under offer / Sold</option><option value="archived">Archive (hide)</option><option value="deleted">Delete (move to trash)</option></select></label><label>Viewing date<input id="editViewing" type="datetime-local"></label></div><div class="actions"><button id="save" type="button">Save changes</button><button id="verifyHouse" class="secondary" type="button">Verify this house routes</button><button id="enrich" class="secondary" type="button">Update listing data</button><button id="uploadPlan" class="secondary" type="button">Upload floor plan</button><input type="file" id="floorPlanFile" accept="image/jpeg,image/png,image/webp,image/avif" hidden><button id="remove" class="danger" type="button">Remove house</button><a id="original" target="_blank" rel="noopener noreferrer">Original listing ↗</a></div><hr><h3>Our notes</h3><div id="notes"></div><form id="noteForm"><textarea id="note" rows="3" required placeholder="Write a comment about this property"></textarea><button>Post comment</button></form></div></dialog>
+<dialog id="dialog"><div class="dialogtop"><h2 id="detailTitle"></h2><button id="close" class="secondary">✕</button></div><div id="gallery" class="gallery"></div><div class="detailbody"><div id="detailFacts" class="facts"></div><div class="detailsgrid"><label>Address<input id="editAddress"></label><label>Price (£)<input id="editPrice" type="number" min="0"></label><label>Bedrooms<input id="editBeds" type="number" min="0"></label><label>Bathrooms<input id="editBaths" type="number" min="0"></label><label>Stage<select id="editStage"><option value="">—</option><option value="interested">Interested</option><option value="viewing_booked">Viewing booked</option><option value="viewed">Viewed</option><option value="shortlisted">Shortlisted</option><option value="rejected">Rejected</option><option value="under_offer_sold">Under offer / Sold</option><option value="archived">Archive (hide)</option><option value="deleted">Delete (move to trash)</option></select></label><label>Viewing date<input id="editViewing" type="datetime-local"></label></div><div class="actions"><button id="save" type="button">Save changes</button><button id="enrich" class="secondary" type="button">Update listing data</button><button id="uploadPlan" class="secondary" type="button">Upload floor plan</button><input type="file" id="floorPlanFile" accept="image/jpeg,image/png,image/webp,image/avif" hidden><button id="remove" class="danger" type="button">Remove house</button><a id="original" target="_blank" rel="noopener noreferrer">Original listing ↗</a></div><hr><h3>Our notes</h3><div id="notes"></div><form id="noteForm"><textarea id="note" rows="3" required placeholder="Write a comment about this property"></textarea><button>Post comment</button></form></div></dialog>
 <dialog id="photoDialog" class="hh-photo-viewer" aria-label="Large property photographs">
  <div class="hh-photo-top">
   <strong id="photoTitle"></strong>
@@ -82,10 +82,11 @@ dialog.hh-photo-viewer[open]{display:flex;flex-direction:column}
 </dialog>
 <script type="module">
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.8';
-import {setupComparison} from './comparison.js?v=50';
+import {setupComparison} from './comparison.js?v=51';
 import {setupExports} from './export-tools.js?v=2';
 import {createUniquePhotoStore,photoDigest} from './photo-dedup.js?v=3';
 import {canonicalListing,importChanges,validateGeocode} from './import-utils.js?v=1';
+import {reconcileOne,mediaRevision} from './reconcile-media.js?v=1';
 import {createEditHistory} from './edit-history.js?v=2';
 import {analyzeFloorplan,inspectFloorplanImage} from './floorplan-ocr.js?v=15';
 const sb=createClient('https://ficnuovumurmhzdujjvj.supabase.co','sb_publishable_yrArzwZ2GizO5ATuiAkymg_LdpVZKC9');
@@ -168,7 +169,7 @@ async function archive(urls,id,prefix='photo',limit=Infinity,checks=[],sourcePla
     if(trace){trace.status='invalid-size';checks.push(trace);continue}
     throw Error('Photo has an unsupported file size');
    }
-   const ext=data.mime==='application/pdf'?'pdf':data.mime==='image/png'?'png':data.mime==='image/webp'?'webp':data.mime==='image/avif'?'avif':'jpg';
+   const ext=data.mime==='application/pdf'?'pdf':data.mime==='image/png'?'png':data.mime==='image/webp'?'webp':data.mime==='image/avif'?'avif':data.mime==='image/gif'?'gif':'jpg';
    if(trace){
     const verdict=sourcePlan?{accepted:blob.type.startsWith('image/'),reason:'identified-in-original-plan-gallery'}:await inspectFloorplanImage(blob);
     trace.validation=verdict;
@@ -243,7 +244,7 @@ async function importHouse(raw){
  const floorplanCandidates=data.floorplans||[];
  const planChecks=[];
  const floorplans=await archive(floorplanCandidates,id,'source-plan',Infinity,planChecks,Number(String(data.extension_version||'0').split('.')[1])>=9);
- const p={id,url,source:data.source,title:data.title||'',address:data.address||'',price:data.price??null,bedrooms:data.bedrooms??null,bathrooms:listingBathrooms(data),wc_count:data.wc_count??null,floors:listingFloors(data),floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:data.garden_area_sqm??null,garden_description:data.garden_description||'',station_name:'',station_distance_miles:null,station_2_name:'',station_2_distance_miles:null,latitude:null,longitude:null,property_type:data.property_type||null,tenure:data.tenure||null,images,floorplans,import_diagnostics:{source:'original-listing',extension_version:data.extension_version||'unknown',status:data.floorplan_status||'unknown',candidates:floorplanCandidates.length,archived:floorplans.length,checks:planChecks,attempted_at:new Date().toISOString(),source_values:{price:data.price??null,bedrooms:data.bedrooms??null,bathrooms:listingBathrooms(data),wc_count:data.wc_count??null,floors:listingFloors(data),floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:data.garden_area_sqm??null,garden_description:data.garden_description||'',property_type:data.property_type||null,tenure:data.tenure||null}},created_by:user.id,status:''};
+ const p={id,url,source:data.source,title:data.title||'',address:data.address||'',price:data.price??null,bedrooms:data.bedrooms??null,bathrooms:listingBathrooms(data),wc_count:data.wc_count??null,floors:listingFloors(data),floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:data.garden_area_sqm??null,garden_description:data.garden_description||'',station_name:'',station_distance_miles:null,station_2_name:'',station_2_distance_miles:null,latitude:null,longitude:null,property_type:data.property_type||null,tenure:data.tenure||null,images,floorplans,import_diagnostics:{source:'original-listing',extension_version:data.extension_version||'unknown',status:data.floorplan_status||'unknown',candidates:floorplanCandidates.length,archived:floorplans.length,checks:planChecks,attempted_at:new Date().toISOString(),media_source_revision:mediaRevision,media_source_result:'completed',source_values:{price:data.price??null,bedrooms:data.bedrooms??null,bathrooms:listingBathrooms(data),wc_count:data.wc_count??null,floors:listingFloors(data),floor_area_sqm:data.floor_area_sqm??null,garden_area_sqm:data.garden_area_sqm??null,garden_description:data.garden_description||'',property_type:data.property_type||null,tenure:data.tenure||null}},created_by:user.id,status:''};
  const r=await sb.from('properties').insert(p);
  if(r.error)throw r.error;
  pendingJourneyImportIds.add(id);
@@ -630,57 +631,31 @@ sb.auth.onAuthStateChange((event)=>{
  if(event==='PASSWORD_RECOVERY')setTimeout(()=>openPasswordDialog(true),0);
 });
 
-async function show(){const r=await sb.from('members').select('id,display_name');if(r.error){txt('loginError','Unable to check membership: '+r.error.message);return}people=Object.fromEntries(r.data.map(x=>[x.id,x.display_name]));if(!people[user.id]){txt('loginError','This account is not registered as a household member');return}$('login').hidden=true;$('mainApp').hidden=false;$('logout').hidden=false;$('refresh').hidden=false;$('changePassword').hidden=false;txt('who',people[user.id]);await refresh()}
+// One-time, resumable repair authorised for the existing catalogue. Opening the
+// app after each row is marked complete remains read-only.
+let mediaRepairRunning=false;
+async function repairExistingMedia(){
+ if(mediaRepairRunning||!/Chrome|Chromium/i.test(navigator.userAgent))return;
+ if(!await probeImporter(false))return;
+ mediaRepairRunning=true;
+ try{
+  const old=homes.filter(p=>p.import_diagnostics?.media_source_revision!==mediaRevision);
+  let saved=0,unavailable=0;
+  for(const property of old){
+   if(!user)break;
+   report('Updating original photos and plans: '+(saved+unavailable+1)+' / '+old.length+'…');
+   try{
+    const result=await reconcileOne({sb,property,read:url=>extension('IMPORT_URL',{url},70000),archive});
+    if(result.status==='saved')saved++;else if(result.status==='listing-unavailable')unavailable++;
+   }catch(e){unavailable++;console.warn('Original media could not be updated',property.address,e)}
+  }
+  if(old.length){await refresh();report('Original photos updated for '+saved+' houses'+(unavailable?'; '+unavailable+' original listings were unavailable.':'.'),!!unavailable)}
+ }finally{mediaRepairRunning=false}
+}
+async function show(){const r=await sb.from('members').select('id,display_name');if(r.error){txt('loginError','Unable to check membership: '+r.error.message);return}people=Object.fromEntries(r.data.map(x=>[x.id,x.display_name]));if(!people[user.id]){txt('loginError','This account is not registered as a household member');return}$('login').hidden=true;$('mainApp').hidden=false;$('logout').hidden=false;$('refresh').hidden=false;$('changePassword').hidden=false;txt('who',people[user.id]);await refresh();void repairExistingMedia()}
 $('loginForm').onsubmit=async e=>{e.preventDefault();txt('loginError','');const r=await sb.auth.signInWithPassword({email:$('email').value,password:$('password').value});if(r.error){txt('loginError',r.error.message);return}user=r.data.user;await show()};
 $('logout').onclick=async()=>{await sb.auth.signOut();location.reload()};
 $('refresh').onclick=async()=>{await refresh();report('Saved data refreshed from Supabase. No original listings checked.');};
-
-let verifyingAll=false,abortVerification=false;
-async function verifyRoutesFor(p){
- const r=await sb.functions.invoke('house-hunt-verified-routes',{body:{id:p.id}});
- if(r.error){
-  let detail=r.data;
-  if(!detail&&r.error.context?.json)try{detail=await r.error.context.json()}catch{}
-  throw Error(detail?.diagnostic?.error||detail?.error||r.error.message||'Google route service unavailable');
- }
- if(!r.data?.saved)throw Error(r.data?.error||'No validated journeys saved');
- return r.data;
-}
-$('verifyHouse').onclick=async()=>{
- if(!selected)return;
- const button=$('verifyHouse'),p=selected;button.disabled=true;button.textContent='Checking address and routes…';
- try{
-  const result=await verifyRoutesFor(p);
-  await refresh();
-  report('Google checked '+p.address+': '+result.verified_destinations+' journeys, '+result.errors.length+' unavailable. No manual corrections changed.',!!result.errors.length);
- }catch(e){report(p.address+': '+String(e.message||e),true)}
- finally{button.disabled=false;button.textContent='Verify this house routes'}
-};
-$('verifyRoutes').onclick=async()=>{
- if(verifyingAll){abortVerification=true;return}
- const list=homes.slice();
- if(!list.length)return;
- if(!confirm('Verify routes for '+list.length+' houses with Google Maps API? Google may charge for geocoding and route requests. Existing manual corrections and addresses will remain unchanged.'))return;
- verifyingAll=true;abortVerification=false;
- const button=$('verifyRoutes');button.textContent='Stop verification';
- let saved=0,failed=0,partly=0,lastError='';
- try{
-  for(const p of list){
-   if(abortVerification)break;
-   report('Checking address and Google journeys: '+p.address+' ('+(saved+failed+1)+'/'+list.length+')');
-   try{
-    const result=await verifyRoutesFor(p);
-    saved++;
-    if(result.errors?.length)partly++;
-   }catch(e){
-    failed++;lastError=p.address+': '+String(e.message||e);
-    if(/key is not configured|google_api_key_not_configured/i.test(lastError))break;
-   }
-  }
-  await refresh();
-  report('Google route verification: '+saved+' saved ('+partly+' partial), '+failed+' unverified'+(abortVerification?' · stopped':'')+(lastError?' · '+lastError:'')+'.',!!failed);
- }finally{verifyingAll=false;button.textContent='Verify journeys (Google)'}
-};
 
 $('importForm').onsubmit=async e=>{e.preventDefault();$('importButton').disabled=true;try{await importHouse($('urlInput').value.trim());$('urlInput').value=''}catch(err){report(err.message,true)}finally{$('importButton').disabled=false}};
 for(const id of ['stageFilter','sort','search'])$(id).addEventListener(id==='search'?'input':'change',id==='stageFilter'?()=>{viewingSelections=null;render()}:render);
