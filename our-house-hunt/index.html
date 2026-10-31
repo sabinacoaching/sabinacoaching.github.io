@@ -84,7 +84,7 @@ dialog.hh-photo-viewer[open]{display:flex;flex-direction:column}
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 import {setupComparison} from './comparison.js?v=50';
 import {setupExports} from './export-tools.js?v=2';
-import {createUniquePhotoStore} from './photo-dedup.js?v=2';
+import {createUniquePhotoStore,photoDigest} from './photo-dedup.js?v=3';
 import {createEditHistory} from './edit-history.js?v=2';
 import {analyzeFloorplan,inspectFloorplanImage} from './floorplan-ocr.js?v=14';
 const sb=createClient('https://ficnuovumurmhzdujjvj.supabase.co','sb_publishable_yrArzwZ2GizO5ATuiAkymg_LdpVZKC9');
@@ -150,26 +150,10 @@ if(version<6){const msg='Chrome importer v0.6 or later is required for importing
 if(!required)report('Importer connected. Missing details will be checked automatically.');
 return true}catch(e){const msg=/v0\.7|requires|must be updated/i.test(e.message||'')?e.message:'Chrome importer is not responding. Install/update the extension, press Reload at chrome://extensions, then reload this webpage.';report(msg,true);if(required)throw Error(msg);return false}}
 function blob64(base64,mime){const binary=atob(base64),arr=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)arr[i]=binary.charCodeAt(i);return new Blob([arr],{type:mime})}
-async function perceptualImageHash(blob){
- if(!blob.type.startsWith('image/'))return null;
- const bitmap=await createImageBitmap(blob);
- try{
-  const canvas=document.createElement('canvas');canvas.width=17;canvas.height=16;
-  const ctx=canvas.getContext('2d',{willReadFrequently:true});
-  if(!ctx)return null;
-  ctx.drawImage(bitmap,0,0,17,16);
-  const pix=ctx.getImageData(0,0,17,16).data;
-  let hash='';
-  const bright=(x,y)=>{const i=(y*17+x)*4;return .299*pix[i]+.587*pix[i+1]+.114*pix[i+2]};
-  for(let y=0;y<16;y++)for(let x=0;x<16;x++)hash+=bright(x,y)>=bright(x+1,y)?'1':'0';
-  return hash;
- }finally{bitmap.close()}
-}
-function hashDistance(a,b){let n=0;for(let i=0;i<a.length;i++)if(a[i]!==b[i])n++;return n}
-async function archive(urls,id,prefix='photo',limit=10,checks=[]){
+async function archive(urls,id,prefix='photo',limit=Infinity,checks=[]){
  const saved=[],hashes=[],seenUrls=new Set();
  let index=0;
- for(const sourceUrl of (urls||[]).slice(0,Math.max(limit*5,50))){
+ for(const sourceUrl of (urls||[])){
   if(saved.length>=limit)break;
   if(typeof sourceUrl!=='string'||seenUrls.has(sourceUrl))continue;
   seenUrls.add(sourceUrl);
@@ -197,8 +181,8 @@ async function archive(urls,id,prefix='photo',limit=10,checks=[]){
     }
    }
    let hash=null;
-   try{hash=await perceptualImageHash(blob)}catch(e){console.warn('Cannot compare picture; preserving image',e)}
-   if(hash&&hashes.some(other=>hashDistance(hash,other)<=12)){
+   try{hash=await photoDigest(blob)}catch(e){console.warn('Cannot compare picture; preserving image',e)}
+   if(hash&&hashes.includes(hash)){
     if(trace){trace.status='duplicate-plan';checks.push(trace)}continue;
    }
    // Unique path on every retry. A previous partial upload cannot block this save.
@@ -242,7 +226,7 @@ async function importHouse(raw){
  const data=await extension('IMPORT_URL',{url},70000);
  if(!data?.images?.length)throw Error('No photographs found. House not added.');
  const id=crypto.randomUUID();
- const images=await archive(data.images,id,'photo',24);
+ const images=await archive(data.images,id,'photo');
  if(!images.length)throw Error('Photographs could not be downloaded. House not added.');
  // Reject duplicated URLs; the extension's floor-plan classification still needs a separate visual validation step.
  const floorplanCandidates=data.floorplans||[];
