@@ -222,3 +222,16 @@
 .hh-status-filter-actions{border-top:1px solid #e1eae4;padding-top:10px;margin-top:5px}
 .hh-status-filter-actions button:first-child{background:#fff!important;color:#315e50!important;
  border:1px solid #c5d5cc!important}
+
+/* Mobile: keep every table column available; minimise sticky photo column. */
+@media(max-width:640px){
+ .hh-table-shell{max-height:80dvh;overflow:auto;-webkit-overflow-scrolling:touch}
+ .hh-table th:first-child,.hh-table td:first-child{min-width:150px!important;max-width:160px!important;width:155px!important;padding:6px!important}
+ .hh-photo-grid{grid-template-rows:74px 29px!important;gap:2px!important}
+ .hh-house{gap:3px}
+ .hh-address{font-size:12px!important;line-height:1.25}
+ .hh-table td{padding:7px 6px}
+ .hh-table th{padding:8px 6px}
+ .hh-listing-row{flex-wrap:wrap}
+ .hh-table .hh-position-select{max-width:78px!important}
+}
