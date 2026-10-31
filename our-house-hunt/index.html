@@ -164,7 +164,8 @@ async function archive(urls,id,prefix='photo',limit=Infinity,checks=[]){
    const blob=blob64(data.base64,data.mime);
    if(trace){trace.bytes=blob.size;trace.mime=blob.type}
    if(blob.size<1300||blob.size>5000000){
-    if(trace){trace.status='invalid-size';checks.push(trace)}continue;
+    if(trace){trace.status='invalid-size';checks.push(trace);continue}
+    throw Error('Photo has an unsupported file size');
    }
    const ext=data.mime==='application/pdf'?'pdf':data.mime==='image/png'?'png':data.mime==='image/webp'?'webp':data.mime==='image/avif'?'avif':'jpg';
    if(trace){
@@ -196,6 +197,7 @@ async function archive(urls,id,prefix='photo',limit=Infinity,checks=[]){
   }catch(e){
    if(trace){trace.status='download-or-storage-error';trace.error=String(e?.message||e).slice(0,300);checks.push(trace)}
    console.warn('Cannot archive image',sourceUrl,e);
+   if(prefix==='photo')throw Error('Could not save all listing photographs: '+String(e?.message||e));
   }
  }
  return saved;
