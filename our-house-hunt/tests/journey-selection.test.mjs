@@ -16,3 +16,8 @@ test('rejects late, inconsistent, or walking-only results',()=>{
  walk.legs=[{mode:{id:'walking'}}];
  assert.equal(selectJourney([late,bad,walk],target),null);
 });
+test('real TfL response uses the journey within the arrival window',()=>{
+ const trips=[j('17:45','18:28',43),j('17:50','18:34',44),j('17:53','18:36',43)];
+ for(const x of trips){x.startDateTime=x.startDateTime.replace('Z','');x.arrivalDateTime=x.arrivalDateTime.replace('Z','')}
+ assert.equal(selectJourney(trips,target),trips[2]);
+});

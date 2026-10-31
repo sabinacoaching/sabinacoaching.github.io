@@ -45,12 +45,36 @@ async function readPropertyFromPage(){
   }
  }
  if(source==='Zoopla'){
+  const expected=location.pathname.match(/\/details\/(\d+)/)?.[1];
+  for(const script of scripts){
+   if(!script.includes('self.__next_f.push')||!script.includes('propertyImage')||!script.includes('floorPlan'))continue;
+   try{
+    const payload=JSON.parse(script.slice(script.indexOf('['),script.lastIndexOf(']')+1))[1];
+    const root=JSON.parse(payload.slice(payload.indexOf(':')+1));
+    let listing=null;
+    const visit=x=>{
+     if(!x||typeof x!=='object'||listing)return;
+     if(String(x.listingId)===expected&&Array.isArray(x.propertyImage)&&x.floorPlan){listing=x;return}
+     for(const value of Object.values(x))visit(value);
+    };
+    visit(root);
+    if(!listing)continue;
+    const media=items=>(items||[]).map(x=>x.filename).filter(x=>typeof x==='string'&&/^[a-z0-9_-]+\.(?:jpg|jpeg|png|webp)$/i.test(x)).map(x=>'https://lid.zoocdn.com/u/1200/900/'+x);
+    const photosFromSource=media(listing.propertyImage);
+    if(photosFromSource.length!==listing.propertyImage.length)continue;
+    authoritativePhotos=photosFromSource;authoritativePlans=media(listing.floorPlan.image);
+    break;
+   }catch(e){console.warn('Zoopla media model unavailable',String(e))}
+  }
+ }
+ if(source==='Zoopla'&&!authoritativePhotos){
   const button=[...document.querySelectorAll('button')].find(x=>/^\d+\s+photos?$/i.test((x.innerText||x.textContent||'').trim()));
   if(button){
    const expected=Number((button.innerText||button.textContent).match(/\d+/)?.[0]);
    button.click();
    for(let attempt=0;attempt<24;attempt++){
     await new Promise(r=>setTimeout(r,400));
+    if(attempt===4&&!document.querySelector('[role="tabpanel"][id$="-content-images"]'))button.click();
     const panel=document.querySelector('[role="tabpanel"][id$="-content-images"]');
     const els=panel?[...panel.querySelectorAll('img')]:[];
     if(expected&&els.length===expected){
@@ -151,7 +175,7 @@ async function readPropertyFromPage(){
     [...document.querySelectorAll('span,div')].find(el=>el.children.length<=2&&
       (el.textContent||'').trim().length<=35&&isFloorButton(el));
   let clickedPlanTab=false,planTabError=null;
-  if(floorTab){try{
+  if(floorTab&&authoritativePlans===null){try{
     const oldResources=new Set((performance.getEntriesByType?.('resource')||[]).map(x=>x.name));
     const previous=new Set([...document.querySelectorAll('img, picture source')]
       .flatMap(el=>[el.currentSrc,el.src,el.getAttribute('src')]).filter(Boolean));
@@ -234,7 +258,7 @@ async function readPropertyFromPage(){
   }
  // Accept the actual labelled floor-plan panel, not unrelated images loaded
  // after opening the gallery. The panel is scoped to this listing's page.
- if(source==='Zoopla'){
+ if(source==='Zoopla'&&authoritativePlans===null){
   authoritativePlans=[];
   const panel=document.querySelector('[role="tabpanel"][id$="-content-floor_plans"]');
   const planImages=panel?[...panel.querySelectorAll('img')].filter(x=>/^floor\s*plan\s+\d+/i.test(x.alt||'')):[];
@@ -258,7 +282,9 @@ async function readPropertyFromPage(){
  const field=label=>{const m=mainText.match(new RegExp('(?:^|\\n)\\s*'+label+'\\s*(?:\\n|:)\\s*(\\d+)','i'));return m?Number(m[1]):null};
  const bedrooms=field('bedrooms?')||Number((description+' '+title).match(/(\d+)\s*(?:bedrooms?|beds?)/i)?.[1])||null;
  const bathrooms=field('bathrooms?')||Number((mainText.slice(0,5000)+' '+description+' '+title).match(/\b(\d+)\s*(?:baths?|bathrooms?|shower rooms?|wet rooms?)\b/i)?.[1])||null;
- const wcs=null; // Separate WC is determined from the floor plan, not Zoopla's aggregated bathroom count.
+ const wcText=mainText+' '+description;
+ const wcNumber=wcText.match(/\b(\d+)\s+(?:separate|downstairs|ground.floor)\s+(?:wcs?|toilets?|cloakrooms?)\b/i);
+ const wcs=wcNumber?Number(wcNumber[1]):/\b(?:separate|downstairs|ground.floor)\s+(?:wc|toilet|cloakroom)\b/i.test(wcText)?1:null;
  const floorAreaPattern=/(?:total\s+)?(?:internal\s+)?(?:floor\s+(?:area|size|space)|gross\s+internal\s+area|living\s+area)\s*(?:of|:|-|approximately|approx\.?)*\s*([\d,.]+)\s*(sq\.?\s?ft|square\s+feet|sq\.?\s?m|sqm|m²)/ig;
  let area=null,match;
  for(const candidate of (mainText+'\n'+description).matchAll(floorAreaPattern)){
