@@ -36,7 +36,7 @@ test('photo galleries compare content across distinct file paths and do not dele
  let seed='';let fetched=0;
  globalThis.fetch=async url=>{fetched++;return {ok:true,blob:async()=>({key:images[url]})}};
  globalThis.createImageBitmap=async blob=>({key:blob.key,close(){}});
- globalThis.document={createElement:()=>({getContext:()=>({drawImage(image){seed=image.key},getImageData(){
+ globalThis.document={createElement:()=>({getContext:()=>({clearRect(){},drawImage(image){seed=image.key},getImageData(){
    let state=Array.from(seed).reduce((n,ch)=>(Math.imul(n,33)+ch.charCodeAt(0))>>>0,1337);
    const data=new Uint8ClampedArray(17*16*4);
    for(let i=0;i<17*16;i++){state=(Math.imul(state,1664525)+1013904223)>>>0;
