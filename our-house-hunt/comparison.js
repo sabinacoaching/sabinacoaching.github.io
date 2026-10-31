@@ -1,4 +1,4 @@
-import {setupStationAccess} from './station-commutes.js?v=19';
+import {setupStationAccess} from './station-commutes.js?v=18';
 export function setupComparison({sb,history,photo,uniquePhotos,openHouse,openPhotoBrowser,onReorder,canReorder,onStatusChange,shouldAutoCalculate,onRestore,getStatusSelection,onStatusFilterChange}){
 const stationAccess=setupStationAccess({sb,history,shouldAutoCalculate});
 const $=id=>document.getElementById(id),node=(tag,cls='',content)=>{const x=document.createElement(tag);x.className=cls;if(content!==undefined)x.textContent=content;return x};
@@ -73,9 +73,11 @@ const journeyFresh=p=>travelDestinations.every(d=>{
 function journeySummary(p,d){
  const v=p.journey_estimates?.[d.id];
  if(v&&Number.isFinite(Number(v.minutes))&&v.minutes>0){
-   return Math.round(v.minutes)+' min';
+   const verified=v.audit_version==='google-address-validated-v1'&&v.address===p.address;
+   const label=v.manual_override===true?'manual':verified?'Google':'';
+   return Math.round(v.minutes)+' min'+(label?' · '+label:'');
  }
- return '—';
+ return 'Not verified';
 }
 async function drainJourneyQueue(){
  if(travelProcessing)return;travelProcessing=true;
