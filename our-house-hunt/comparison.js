@@ -73,7 +73,7 @@ const journeyFresh=p=>travelDestinations.every(d=>{
 function journeySummary(p,d){
  const v=p.journey_estimates?.[d.id];
  if(v&&Number.isFinite(Number(v.minutes))&&v.minutes>0){
-   return Math.round(v.minutes)+' min;
+   return Math.round(v.minutes)+' min';
  }
  return '—';
 }
