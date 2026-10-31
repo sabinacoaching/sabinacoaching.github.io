@@ -22,7 +22,16 @@ export function createUniquePhotoStore(photo) {
      const pixel=(x,y)=>{const off=(y*17+x)*4;return Math.round(pixels[off]*.299+pixels[off+1]*.587+pixels[off+2]*.114)};
      let hash='';
      for(let y=0;y<16;y++)for(let x=0;x<16;x++)hash+=pixel(x,y)>=pixel(x+1,y)?'1':'0';
-     return hash;
+     // A second hash of the central crop catches re-encoded and lightly cropped versions.
+     const side=Math.min(bitmap.width,bitmap.height)*0.82;
+     const left=(bitmap.width-side)/2,top=(bitmap.height-side)/2;
+     ctx.clearRect(0,0,17,16);
+     ctx.drawImage(bitmap,left,top,side,side,0,0,17,16);
+     const center=ctx.getImageData(0,0,17,16).data;
+     const luminance=(x,y)=>{const o=(y*17+x)*4;return Math.round(center[o]*.299+center[o+1]*.587+center[o+2]*.114)};
+     let cropHash='';
+     for(let y=0;y<16;y++)for(let x=0;x<16;x++)cropHash+=luminance(x,y)>=luminance(x+1,y)?'1':'0';
+     return {full:hash,center:cropHash};
     }finally{bitmap.close()}
    }catch(e){console.warn('Cannot fingerprint photo; keeping original',key,String(e));return null}
   })());
@@ -45,7 +54,7 @@ export function createUniquePhotoStore(photo) {
     if(!path||state.paths.has(path))continue;
     state.paths.add(path);
     const hash=await fingerprint(item);
-    if(hash&&state.seen.some(old=>old&&distance(hash,old)<=12))continue;
+    if(hash&&state.seen.some(old=>old&&(distance(hash.full,old.full)<=24||distance(hash.center,old.center)<=20)))continue;
     state.seen.push(hash);
     state.items.push(item);
    }
